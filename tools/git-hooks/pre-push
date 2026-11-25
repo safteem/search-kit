@@ -1,0 +1,4 @@
+#!/bin/sh
+# Перед пушем: нет ли в пакете ключей, личных путей и имён (tools/check_before_push.py).
+cd "$(git rev-parse --show-toplevel)" || exit 1
+python -I tools/check_before_push.py || python3 -I tools/check_before_push.py

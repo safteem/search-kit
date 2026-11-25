@@ -1,0 +1,14 @@
+{
+  "name": "search-kit-marketplace",
+  "description": "Search Kit: search and research skills for AI agents",
+  "owner": {
+    "name": "search-kit authors"
+  },
+  "plugins": [
+    {
+      "name": "search-kit",
+      "source": "./",
+      "description": "Web and community search with sources, social post capture and deep research. Run the setup skill after installing."
+    }
+  ]
+}

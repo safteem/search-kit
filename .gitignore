@@ -1,0 +1,19 @@
+# Ключи и личное никогда не попадают в репозиторий
+credentials.md
+**/credentials.md
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
+my-config.md
+telegram.json
+telegram-chats.md
+private-words.txt
+
+# Результаты поиска и временное
+research/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
