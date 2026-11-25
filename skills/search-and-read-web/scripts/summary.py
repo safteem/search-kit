@@ -134,7 +134,7 @@ for spec in specs:
             elif kind == "rd":
                 rec = dict(title=x["title"], where="r/" + x.get("subreddit", ""), sort=num(x.get("num_comments")),
                            ups=num(x.get("score")), age=age_days(x.get("created_at_iso")),
-                           text=clean(x.get("selftext"), 250), url="https://redd.it/" + x["id"])
+                           text=clean(x.get("selftext"), 250), url=x.get("url") or ("https://www.reddit.com" + x["permalink"] if x.get("permalink") else "https://redd.it/" + x["id"]))
             else:
                 views, likes = num(x.get("viewCountInt")), num(x.get("likeCountInt"))
                 rec = dict(title=x["title"], where=(x.get("channel") or {}).get("title", ""), views=views, likes=likes,

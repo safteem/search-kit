@@ -40,7 +40,7 @@ if __name__ == "__main__":
         sys.exit()
     path, out, *pairs = sys.argv[1:]
     data = call(path, dict(p.split("=", 1) for p in pairs))
-    Path(out).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    Path(out).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8", errors="replace")
     ok = data.get("success") if isinstance(data, dict) else None
     print(f"{path}: success={ok} списано={data.get('credits_charged')} осталось={data.get('credits_remaining')}"
           + (f" ОШИБКА {data.get('http_status')}: {data.get('error', '')[:200]}" if data.get("http_status") else "")

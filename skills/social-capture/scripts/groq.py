@@ -55,6 +55,6 @@ if __name__ == "__main__":
             data = json.loads(r.read())
     except urllib.error.HTTPError as e:
         sys.exit(f"HTTP {e.code}: {e.read()[:400].decode(errors='replace')}")
-    Path(out).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    Path(out).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8", errors="replace")
     print(f"OK за {time.time() - t0:.1f} с, аудио {data.get('duration')} с, язык {data.get('language')}, "
           f"фраз {len(data.get('segments') or [])} -> {out}")

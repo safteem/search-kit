@@ -79,7 +79,7 @@ def run(name, input_file, output_file, max_usd="0.5"):
     params = {"timeout": 300, "maxTotalChargeUsd": max_usd}
     items = call("POST", f"/acts/{actor_id(name)}/run-sync-get-dataset-items",
                  body=body, params=params, timeout=330)
-    Path(output_file).write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
+    Path(output_file).write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8", errors="replace")
     print(f"{len(items)} записей -> {output_file}")
     budget()
 
