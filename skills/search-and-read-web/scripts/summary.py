@@ -2,7 +2,7 @@
 
 python -I summary.py <вопрос> <выход.md> <файл.json>::<площадка>::<формулировка>::<цель> [...]
 
-Площадки: yt — YouTube (SC), rd — Reddit (SC), gs — Google `site:x.com` / `site:threads.com` (SC),
+Площадки: yt — YouTube (SC), rd — Reddit (SC), gs — любая выдача Google (SC), в том числе `site:x.com`, `site:threads.com`,
 xs — поиск X (Apify scrape.badger), xr — ответы X (scrape.badger `Get Replies`), tr — ответы Threads (Apify nice_dev).
 
 Склеивает выдачи нескольких формулировок, убирает дубли, сортирует (Reddit по комментариям, YouTube и X по лайкам,
@@ -61,11 +61,16 @@ MONTHS = {m: i for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct No
 
 
 def google_social(x):
-    """Результат Google (site:x.com / site:threads.com): автор, тип, возраст из начала описания."""
+    """Результат Google: для X и Threads автор и тип (пост, профиль), для остального сайт; возраст из начала описания."""
     url, desc = x.get("url", ""), x.get("description", "") or ""
     m = re.search(r"(?:x|twitter)\.com/([^/?#]+)/(?:status|article)/(\d+)", url) or re.search(r"threads\.(?:com|net)/@([^/?#]+)/post/([^/?#]+)", url)
-    author, key = (m.group(1), m.group(2)) if m else (re.sub(r"^https?://(www\.)?[^/]+/@?", "", url).split("/")[0], url)
-    kind = "пост" if m else "профиль"
+    social = re.search(r"//(www\.)?(x|twitter|threads)\.(com|net)/", url)
+    if m:
+        author, key, kind = m.group(1), m.group(2), "пост"
+    elif social:  # профиль X или Threads: зацепка, а не пост
+        author, key, kind = re.sub(r"^https?://(www\.)?[^/]+/@?", "", url).split("/")[0], url, "профиль"
+    else:  # обычная страница из выдачи Google
+        author, key, kind = re.sub(r"^https?://(www\.)?", "", url).split("/")[0], url, "страница"
     age = ""
     d = re.match(r"\s*([A-Z][a-z]{2}) (\d{1,2}), (\d{4})", desc)
     if d and d.group(1) in MONTHS:
@@ -75,7 +80,7 @@ def google_social(x):
         if d:
             age = {"hour": 0, "day": 1, "week": 7}[d.group(2)] * int(d.group(1))
     text = re.sub(r"^\s*([A-Z][a-z]{2} \d{1,2}, \d{4}|\d+ \w+ ago)\s*\.\.\.\s*", "", desc)
-    return key, dict(title=x.get("title", ""), where="@" + author, kind=kind, age=age, text=clean(text, 250), url=url)
+    return key, dict(title=x.get("title", ""), where=("" if kind == "страница" else "@") + author, kind=kind, age=age, text=clean(text, 250), url=url)
 
 
 def x_tweet(x, n):
@@ -141,7 +146,7 @@ for spec in specs:
             items[kind][key] = rec
     queries.append((plat, query, goal, found, new))
 
-PLAT = dict(rd="Reddit", yt="YouTube", gs="Google (X, Threads)", xs="X (Apify)", xr="Ответы X (Apify)", tr="Ответы Threads (Apify)")
+PLAT = dict(rd="Reddit", yt="YouTube", gs="Google", xs="X (Apify)", xr="Ответы X (Apify)", tr="Ответы Threads (Apify)")
 out = [f"# Сводка: {question}", "", f"Собрано {NOW:%Y-%m-%d}. Сортировка: Reddit по комментариям, YouTube и X по лайкам, "
        "шортсы по просмотрам, ответы по лайкам, Google в своём порядке.", "",
        "## Запросы", "", "| # | Площадка | Формулировка | Цель | Нашлось | Новых |", "|---|---|---|---|---|---|"]
@@ -160,7 +165,7 @@ sections = [
     ("xr", "Ответы X (по лайкам, топ-20)", X_HEAD, X_ROW),
     ("tr", "Ответы Threads (по лайкам, топ-20)", "| # | Текст | Автор | Лайки | Ответы | Дней |\n|---|---|---|---|---|---|",
      lambda i, r: f"| {i} | [{cell(r['title'])}]({r['url']}) | {r['where']} | {r['sort']} | {r['replies']} | {r['age']} |"),
-    ("gs", "X и Threads (выдача Google, цифр нет — порядок Google)", "| # | Запрос | Заголовок | Автор | Тип | Дней | Отрывок |\n|---|---|---|---|---|---|---|",
+    ("gs", "Выдача Google (цифр нет, порядок Google)", "| # | Запрос | Заголовок | Автор | Тип | Дней | Отрывок |\n|---|---|---|---|---|---|---|",
      lambda i, r: f"| {i} | {r['q']} | [{cell(r['title'][:80])}]({r['url']}) | {r['where']} | {r['kind']} | {r['age']} | {cell(r['text'])} |"),
     ("sh", "YouTube, шортсы", "| # | Запрос | Название | Просм. | Описание |\n|---|---|---|---|---|",
      lambda i, r: f"| {i} | {r['q']} | [{cell(r['title'][:90])}]({r['url']}) | {r['views']} | {cell(r['text'])} |"),
