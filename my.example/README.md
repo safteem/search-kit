@@ -10,6 +10,5 @@
 | `my-config.md` | язык, город, лимиты трат, предпочтения |
 | `keys-template.txt` | образец файла ключей (в `my/` он лежит под именем файла ключей, который читают скрипты) |
 | `telegram-chats.md` | карта своих Telegram-чатов (по желанию) |
-| `private-words.txt` | личные слова, которые нельзя отправлять на GitHub |
 
 Где лежит `my/` у вас: `python -I skills/social-capture/scripts/keys.py where`.
