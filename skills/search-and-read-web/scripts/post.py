@@ -21,6 +21,14 @@ def t(s):
     return html.unescape(s or "").strip()
 
 
+def expand(text, urls):
+    """Короткие t.co заменить настоящими адресами из выдачи: агент сразу видит, куда ведёт ссылка."""
+    for u in urls or []:
+        if isinstance(u, dict) and u.get("url") and u.get("expanded_url"):
+            text = text.replace(u["url"], u["expanded_url"])
+    return text
+
+
 def day(ts):
     try:
         if isinstance(ts, (int, float)):
@@ -39,7 +47,11 @@ def sc_tweet(d):
     print(f"лайки {l.get('favorite_count')} · ответы {l.get('reply_count')} · репосты {l.get('retweet_count')} · "
           f"закладки {l.get('bookmark_count')} · просмотры {(d.get('views') or {}).get('count')} · "
           f"conversation_id {l.get('conversation_id_str')}\n")
-    print(t(l.get("full_text")))
+    note = ((d.get("note_tweet") or {}).get("note_tweet_results") or {}).get("result") or {}
+    if note.get("text"):  # длинный пост: в full_text он обрезан, целиком лежит в note_tweet
+        print(expand(t(note["text"]), (note.get("entity_set") or {}).get("urls")))
+    else:
+        print(expand(t(l.get("full_text")), (l.get("entities") or {}).get("urls")))
     art = d.get("article") or {}
     art = ((art.get("article_results") or {}).get("result")) or art  # SC кладёт статью в article.article_results.result
     blocks = ((art.get("content_state") or {}).get("blocks")) or []
@@ -99,7 +111,7 @@ for f in files:
             print(f"# X @{x.get('username')}, {day(x.get('created_at'))} — https://x.com/{x.get('username')}/status/{x.get('id')}")
             print(f"лайки {x.get('favorite_count')} · ответы {x.get('reply_count')} · репосты {x.get('retweet_count')} · "
                   f"закладки {x.get('bookmark_count')} · просмотры {x.get('view_count')} · подписчики {x.get('user_followers_count')}")
-            print(f"о себе: {t(x.get('user_description'))[:150]}\n\n{t(x.get('full_text') or x.get('text'))}\n")
+            print(f"о себе: {t(x.get('user_description'))[:150]}\n\n{expand(t(x.get('full_text') or x.get('text')), x.get('urls'))}\n")
     elif isinstance(d, list) and d and ("source" in d[0] or "rootPostUrl" in d[0]):  # Threads из Apify nice_dev
         for x in d:
             item = dict(code=x.get("code") or x.get("postCode"), user=x.get("authorUsername", ""), likes=x.get("likeCount") or 0,
