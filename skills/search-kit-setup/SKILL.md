@@ -1,6 +1,6 @@
 ---
 name: search-kit-setup
-description: "Знакомство, установка, настройка и обновление пакета search-kit: что он умеет (поиск по Google, Keenable, YouTube, Reddit, X, Threads, Instagram, TikTok, картам, магазинам и бронированию, GitHub, научным статьям, своим Telegram-чатам; разбор поста по ссылке; глубокий ресерч), какие сервисы нужны и зачем (ScrapeCreators, Apify, Groq; по желанию Keenable, Tavily, Firecrawl), ключи (человек вписывает сам, агент их не видит; уже настроенные подхватываются), подключения без дублей, личные настройки, Telegram по желанию, пробные запросы, итог «что где лежит». Работает в BB, Claude Code, Codex и других оболочках, на Windows, Mac и Linux."
+description: "Знакомство, установка, настройка и обновление пакета search-kit: что он умеет (поиск по Google, Keenable, YouTube, Reddit, X, Threads, Instagram, TikTok, картам, магазинам и бронированию, GitHub, научным статьям, своим Telegram-чатам; разбор поста по ссылке; глубокий ресерч), какие сервисы нужны и зачем (Keenable, ScrapeCreators, Apify, Tavily, Firecrawl, Groq), ключи (человек вписывает сам, агент их не видит; уже настроенные подхватываются), подключения без дублей, личные настройки, Telegram по желанию, пробные запросы, итог «что где лежит». Работает в BB, Claude Code, Codex и других оболочках, на Windows, Mac и Linux."
 when_to_use: "Фразы вроде «установи search-kit», «настрой search-kit», «setup search-kit», «что умеет search-kit», «как пользоваться поиском», «проверь ключи», «подключи Telegram к поиску», «обнови search-kit», «удали search-kit». Также сразу после установки пакета (README отправляет сюда) и когда скил поиска не нашёл личных настроек."
 ---
 
@@ -36,11 +36,18 @@ when_to_use: "Фразы вроде «установи search-kit», «наст�
 научные статьи. По желанию ещё ваши Telegram-чаты. Ещё умею разобрать пост по ссылке и сделать большое
 исследование.
 
-Чтобы я заработал, нужно завести 3 бесплатных аккаунта: ScrapeCreators (Google, YouTube, соцсети), Apify (X и
-карты) и Groq (расшифровка видео). По желанию ещё 3 помощника для поиска: Keenable, Tavily и Firecrawl. Я
-подскажу, где и как.
+Чтобы я заработал, нужно 6 сервисов, у всех есть бесплатный тариф:
+- Keenable: быстрый поиск по интернету (основа поиска вместе с Google);
+- ScrapeCreators: Google, YouTube, Reddit, Threads, Instagram, TikTok;
+- Apify: X и карты с отзывами;
+- Tavily: читает страницы сайтов целиком;
+- Firecrawl: живые цены и цифры, сайты с защитой;
+- Groq: расшифровка речи из видео.
+Я подскажу, где зарегистрироваться и как подключить каждый.
 
 Займёт минут 15. Начинаем?»
+
+Список сервисов называть полностью, все 6, без пометок «по желанию»: все обязательны.
 
 ## Шаг 1. Где мы
 - Оболочка: есть переменная окружения `BB_THREAD_ID` → BB; это Claude Code (приложение Claude или `claude`
@@ -77,7 +84,7 @@ when_to_use: "Фразы вроде «установи search-kit», «наст�
 
 ## Шаг 4. Ключи
 Где взять (у каждого бесплатный вход; размер бесплатного тарифа уточнить на странице сервиса, цифры меняются):
-ScrapeCreators: scrapecreators.com; Apify: apify.com (бесплатно $5 в месяц); Groq: console.groq.com. Предложить
+Keenable: keenable.ai; ScrapeCreators: scrapecreators.com; Apify: apify.com (бесплатно $5 в месяц); Tavily: tavily.com; Firecrawl: firecrawl.dev; Groq: console.groq.com. Предложить
 поискать промокоды и бонусы при регистрации (`{скилы}/search-and-read-web/references/promo-codes.md`).
 1. Что уже есть: `python -I "{скилы}/social-capture/scripts/keys.py" check`. Ключи в переменных среды и в общем файле
    подхватываются сами: если всё найдено, шаг закончен.
@@ -85,21 +92,21 @@ ScrapeCreators: scrapecreators.com; Apify: apify.com (бесплатно $5 в �
    `python -I "{пакет}/tools/install.py" keys-file "<путь к нему>"` (скрипт впишет путь, ключи не читает).
 3. Недостающие ключи вписывает человек:
    - BB: форма секретов, агент значений не видит:
-     `bb secret request SCRAPECREATORS_API_KEY APIFY_TOKEN GROQ_API_KEY --write-env "<файл ключей>" --purpose "Ключи для поиска search-kit" --describe "SCRAPECREATORS_API_KEY=Google, YouTube, Reddit, соцсети" --describe "APIFY_TOKEN=X, ответы Threads, карты" --describe "GROQ_API_KEY=расшифровка речи"`.
+     `bb secret request KEENABLE_API_KEY SCRAPECREATORS_API_KEY APIFY_TOKEN TAVILY_API_KEY FIRECRAWL_API_KEY GROQ_API_KEY --write-env "<файл ключей>" --purpose "Ключи для поиска search-kit" --describe "SCRAPECREATORS_API_KEY=Google, YouTube, Reddit, соцсети" --describe "APIFY_TOKEN=X, ответы Threads, карты" --describe "GROQ_API_KEY=расшифровка речи" --describe "KEENABLE_API_KEY=быстрый поиск" --describe "TAVILY_API_KEY=чтение страниц" --describe "FIRECRAWL_API_KEY=живые цифры, защищённые сайты"`.
      `<файл ключей>`: общий файл, если указан, иначе `{пакет}/my/` + файл ключей из строки «Файлы ключей» вывода
      `keys.py where`. Охранник оболочки отклонил команду: дать её человеку, он запустит сам в терминале BB.
-   - Остальные: `python -I "{скилы}/social-capture/scripts/keys.py" add-missing` допишет пустые строки и напечатает
+   - Остальные: `python -I "{скилы}/social-capture/scripts/keys.py" add-missing keenable tavily firecrawl` допишет пустые строки и напечатает
      путь; человек сам открывает файл (Windows: Win+R, `notepad "<путь>"`; Mac: `open -e "<путь>"`; Linux: любой
      редактор), вставляет ключи после «=», сохраняет. Агент файл не открывает.
    - Неверный ключ заменить: человек сам удаляет строку в редакторе и вписывает заново (форма BB уже вписанную
      строку не перезаписывает).
 4. Проверка: `python -I "{скилы}/social-capture/scripts/keys.py" test`.
 
-## Шаг 5. Подключения поиска (по желанию)
-Keenable (быстрый поиск, без ключа с лимитом), Tavily (чтение страниц, Reddit и YouTube запасным путём), Firecrawl
-(живые цифры, защищённые сайты). Без них пакет работает: Google и соцсети идут скриптами по ключам. Подключения у
-каждого агента свои: ставятся отдельно для каждого агента, которым человек пользуется. Сначала посмотреть, что уже
-подключено, и не дублировать. Человек хочет подключить сам через интерфейс оболочки: дать адреса и проверить потом.
+## Шаг 5. Подключения поиска (обязательно)
+Keenable (быстрый поиск, основа вместе с Google), Tavily (чтение страниц целиком), Firecrawl (живые цифры,
+защищённые сайты). Все три нужны: без них поиск заметно слабее. Подключения у каждого агента свои: ставятся
+для каждого агента, которым человек пользуется. Сначала посмотреть, что уже подключено, и не дублировать.
+Ключи этих сервисов — в тот же файл ключей (шаг 4: `KEENABLE_API_KEY`, `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`).
 - Claude Code (и агент Claude Code в BB): `references/claude-code.md`, раздел «Подключения поиска».
 - Codex, Gemini CLI, Antigravity и другие агенты BB: `references/bb.md`, раздел «Подключения поиска».
 - Проверка в новой сессии или треде: по одному пробному вызову каждого.

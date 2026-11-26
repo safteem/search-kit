@@ -12,7 +12,9 @@ APIFY_TOKEN=
 # Расшифровка речи из видео: console.groq.com
 GROQ_API_KEY=
 
-# Только если подключения поиска ставите с ключом из этого файла (в Claude Code):
-# TAVILY_API_KEY=
-# FIRECRAWL_API_KEY=
-# KEENABLE_API_KEY=
+# Быстрый поиск: keenable.ai
+KEENABLE_API_KEY=
+# Чтение страниц: tavily.com
+TAVILY_API_KEY=
+# Живые цифры, защищённые сайты: firecrawl.dev
+FIRECRAWL_API_KEY=

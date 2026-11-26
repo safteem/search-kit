@@ -29,6 +29,9 @@ NAMES = {
     "SCRAPECREATORS_API_KEY": "ScrapeCreators (Google, Reddit, YouTube, Threads, посты соцсетей)",
     "APIFY_TOKEN": "Apify (X, ответы Threads, карты)",
     "GROQ_API_KEY": "Groq (расшифровка речи)",
+    "KEENABLE_API_KEY": "Keenable (быстрый поиск; подключение агента)",
+    "TAVILY_API_KEY": "Tavily (чтение страниц; подключение агента)",
+    "FIRECRAWL_API_KEY": "Firecrawl (живые цифры, защищённые сайты; подключение агента)",
 }
 # ключи подключений MCP — только если подключение ставит скил search-kit-setup (по имени сервиса, не ключа)
 OPTIONAL = {"keenable": "KEENABLE_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY"}
@@ -150,7 +153,7 @@ def test():
         "TAVILY_API_KEY": ("https://api.tavily.com/usage", "Authorization", "Bearer {}"),
         "FIRECRAWL_API_KEY": ("https://api.firecrawl.dev/v1/team/credit-usage", "Authorization", "Bearer {}"),
     }
-    optional = {"TAVILY_API_KEY", "FIRECRAWL_API_KEY"}
+    optional = set()
     print("KEENABLE_API_KEY: отдельной бесплатной проверки нет; Keenable работает и без ключа (с лимитом), "
           "проверяется пробным поиском")
     for name, (url, header, fmt) in checks.items():
