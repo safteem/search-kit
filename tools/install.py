@@ -1,6 +1,6 @@
 """Установка и обновление скилов search-kit в папку скилов любой оболочки (BB, Codex, Pi, Cursor и т. п.).
 
-python -I tools/install.py <папка скилов> [--dry-run]
+python -I tools/install.py <папка скилов> [--dry-run] [--force]
 
 Примеры папок: BB — ~/.bb/skills; Codex — ~/.codex/skills; общая для агентов — ~/.agents/skills.
 Claude Code ставит пакет плагином (README), этот скрипт для него не нужен.
@@ -29,17 +29,25 @@ def main():
     if len(args) != 1:
         sys.exit(__doc__)
     dry = "--dry-run" in sys.argv
+    force = "--force" in sys.argv
     target = Path(args[0]).expanduser()
     if not target.is_dir():
         sys.exit(f"Нет папки {target}. Проверьте путь: папку скилов создаёт сама оболочка.")
     backup = Path.home() / ".search-kit" / "backups" / dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    old = target / "setup"  # так скил установки назывался до 26.11.2026
+    if (old / "SKILL.md").is_file() and "search-kit" in (old / "SKILL.md").read_text(encoding="utf-8", errors="ignore"):
+        print(f"setup: старое имя скила установки → {backup / 'setup'} (теперь он search-kit-setup)")
+        if not dry:
+            backup.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old), str(backup / "setup"))
     for skill in sorted(p for p in SRC.iterdir() if (p / "SKILL.md").is_file()):
         dest = target / skill.name
         if dest.exists() or dest.is_symlink():
             ours = (dest / "SKILL.md").is_file() and "search-kit" in (dest / "SKILL.md").read_text(encoding="utf-8", errors="ignore")
-            if not ours:
-                print(f"{skill.name}: ВНИМАНИЕ, в {dest} лежит чужой скил с тем же именем (в нём нет упоминания search-kit). "
-                      "Он тоже уйдёт в резервную папку; если он нужен, переименуйте его до установки.")
+            if not ours and not force:
+                print(f"{skill.name}: ПРОПУЩЕН. В {dest} лежит чужой скил с тем же именем (в нём нет упоминания search-kit). "
+                      "Переименуйте его или запустите с --force: тогда он уйдёт в резервную папку.")
+                continue
             print(f"{skill.name}: старая версия → {backup / skill.name}")
             if not dry:
                 backup.mkdir(parents=True, exist_ok=True)
