@@ -62,7 +62,7 @@ MONTHS = {m: i for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct No
 
 def google_social(x):
     """Результат Google: для X и Threads автор и тип (пост, профиль), для остального сайт; возраст из начала описания."""
-    url, desc = x.get("url", ""), x.get("description", "") or ""
+    url, desc = x.get("url", ""), x.get("description") or x.get("snippet") or ""  # обычный режим: description; pro: snippet
     m = re.search(r"(?:x|twitter)\.com/([^/?#]+)/(?:status|article)/(\d+)", url) or re.search(r"threads\.(?:com|net)/@([^/?#]+)/post/([^/?#]+)", url)
     social = re.search(r"//(www\.)?(x|twitter|threads)\.(com|net)/", url)
     if m:
@@ -72,8 +72,11 @@ def google_social(x):
     else:  # обычная страница из выдачи Google
         author, key, kind = re.sub(r"^https?://(www\.)?", "", url).split("/")[0], url, "страница"
     age = ""
+    pub = re.match(r"(\d{4})-(\d{2})-(\d{2})", x.get("published_at") or "")  # режим pro: дата отдельным полем
     d = re.match(r"\s*([A-Z][a-z]{2}) (\d{1,2}), (\d{4})", desc)
-    if d and d.group(1) in MONTHS:
+    if pub:
+        age = (NOW.date() - dt.date(*map(int, pub.groups()))).days
+    elif d and d.group(1) in MONTHS:
         age = (NOW.date() - dt.date(int(d.group(3)), MONTHS[d.group(1)], int(d.group(2)))).days
     else:
         d = re.match(r"\s*(\d+) (hour|day|week)s? ago", desc)
