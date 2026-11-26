@@ -2,7 +2,8 @@
 
 python -I post.py <файл.json> [ещё файл.json ...] [--id <номер твита или код поста>]
 
-Понимает: открытый твит SC (`v1/twitter/tweet`, со статьёй X), открытый пост Threads SC (`v1/threads/post`),
+Понимает: ветку Reddit SC (`v1/reddit/post/comments`: пост целиком и дерево комментариев с ответами, лучшие сверху),
+открытый твит SC (`v1/twitter/tweet`, со статьёй X), открытый пост Threads SC (`v1/threads/post`),
 выдачу и ответы X из Apify scrape.badger (список), ответы Threads из Apify nice_dev (список).
 Threads: каждая ветка печатается отдельно (ответы привязаны к своему корневому посту по rootPostUrl), файлы SC и Apify
 про один пост сливаются, дубли убираются, сортировка по лайкам, топ-20 на ветку. `--id <код>` — только эта ветка.
@@ -101,6 +102,41 @@ def code_of(url):
     return url.split("/post/")[-1].split("?")[0] if "/post/" in url else ""
 
 
+def reddit_thread(d):
+    """Ветка Reddit SC: пост целиком (ссылки как есть) и комментарии деревом, внутри уровня — по баллам."""
+    p = d.get("post") or {}
+    url = "https://www.reddit.com" + p["permalink"] if p.get("permalink") else p.get("url", "")
+    print(f"# Reddit r/{p.get('subreddit', '')}, {str(p.get('created_at_iso') or '')[:10]} — {url}")
+    print(f"баллы {p.get('score')} · комментариев {p.get('num_comments')} · автор u/{p.get('author', '')}\n")
+    print(t(p.get("title")) + "\n")
+    if p.get("selftext"):
+        print(t(p.get("selftext")) + "\n")
+    shown = [0]
+
+    def items(node):
+        if isinstance(node, dict):
+            return node.get("items") or []
+        return node or []
+
+    def walk(comments, depth):
+        for c in sorted(items(comments), key=lambda c: -(c.get("score") or 0)):
+            body = t(c.get("body"))
+            if not body or body in ("[deleted]", "[removed]"):
+                continue
+            shown[0] += 1
+            who = f"u/{c.get('author', '')}" + (" (автор поста)" if c.get("is_submitter") else "")
+            pad = "  " * depth
+            text = body.replace("\n", "\n" + pad + "  ")
+            print(f"{pad}- {who}, {c.get('score')} баллов, {str(c.get('created_at_iso') or '')[:10]}: {text}")
+            walk(c.get("replies"), depth + 1)
+
+    print("## Комментарии (лучшие сверху, ответы с отступом)\n")
+    walk(d.get("comments"), 0)
+    rest = (p.get("num_comments") or 0) - shown[0]
+    if rest > 0:
+        print(f"\n…ещё около {rest} комментариев не пришло в выдаче (Reddit отдаёт часть; свернутые и удалённые не считаются).")
+
+
 files = [a for a in sys.argv[1:] if not a.startswith("--")]
 want = sys.argv[sys.argv.index("--id") + 1] if "--id" in sys.argv else None
 files = [f for f in files if f != want]
@@ -115,7 +151,10 @@ def add_post(item):
 
 for f in files:
     d = json.load(open(f, encoding="utf-8"))
-    if isinstance(d, dict) and "legacy" in d:
+    if isinstance(d, dict) and isinstance(d.get("post"), dict) and "subreddit" in d["post"]:
+        reddit_thread(d)
+        print("\n" + "=" * 60 + "\n")
+    elif isinstance(d, dict) and "legacy" in d:
         sc_tweet(d)
     elif isinstance(d, dict) and "threadItems" in d:
         post = th_item(d.get("post") or {})
