@@ -52,7 +52,7 @@ RESEARCH_DIRS = {"research", "research_notes", "reports"}
 APIFY_LIMIT_USD = 0.5
 
 # --- слой 1: секреты ---------------------------------------------------------------------------------------------
-SECRET_FILES = re.compile(r"credentials\.md|\.encryption-key|\.agent-reach|\.agent-browser", re.I)
+SECRET_FILES = re.compile(r"credentials\.md|\.encryption-key|\.agent-reach|\.agent-browser|\bkeys\.env\b|[/\\]secrets[/\\]", re.I)
 SECRET_FILES_CASE = re.compile(r"\.session(-journal)?\b|(?<![\w.$])\.env\b(?!\.example)")  # requests.Session, os.environ — можно
 KEY_VARS = re.compile(r"\b(SCRAPECREATORS_API_KEY|APIFY_TOKEN|GROQ_API_KEY|TAVILY_API_KEY|FIRECRAWL_API_KEY|"
                       r"KEENABLE_API_KEY|GITHUB_TOKEN|TELEGRAM_API_HASH|TELEGRAM_SESSION_STRING)\b")
