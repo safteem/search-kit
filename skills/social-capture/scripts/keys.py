@@ -2,7 +2,8 @@
 
 Порядок поиска для каждого ключа:
 1. файл ключей — первый существующий из списка: путь в переменной SEARCH_KIT_CREDENTIALS,
-   ~/.search-kit/credentials.md, ~/.claude/credentials.md; строка вида ИМЯ=значение;
+   ~/.search-kit/credentials.md, ~/.search-kit/.env (сюда пишет хранилище секретов BB:
+   `bb secret request ИМЯ --write-env ~/.search-kit/.env`), ~/.claude/credentials.md; строка вида ИМЯ=значение;
 2. переменная окружения с тем же именем (запасной путь для оболочек без файла ключей).
 Облачная сессия Claude Code (CLAUDE_CODE_REMOTE=true) без ключа: запрос уходит без ключа, его добавляет прокси.
 
@@ -29,7 +30,8 @@ def files():
     found = []
     custom = os.environ.get("SEARCH_KIT_CREDENTIALS")
     for p in ([Path(custom).expanduser()] if custom else []) + [
-            Path.home() / ".search-kit" / "credentials.md", Path.home() / ".claude" / "credentials.md"]:
+            Path.home() / ".search-kit" / "credentials.md", Path.home() / ".search-kit" / ".env",
+            Path.home() / ".claude" / "credentials.md"]:
         if p.is_file() and p not in found:
             found.append(p)
     return found
