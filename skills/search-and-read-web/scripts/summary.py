@@ -7,9 +7,10 @@ python -I summary.py <вопрос> <выход.md> <файл.json>::<площа
 xs — поиск X (Apify scrape.badger), xr — ответы X (scrape.badger `Get Replies`), tr — ответы Threads (Apify nice_dev).
 
 Склеивает выдачи нескольких формулировок, убирает дубли, сортирует (Reddit по комментариям, YouTube и X по лайкам,
-шортсы по просмотрам, топ-15; ответы X и Threads по лайкам, топ-20), режет текст: пост Reddit и X 250 символов (ссылки не выкидывает, а сжимает до сайта и пути;
-у X добавляет до 2 ссылок поста и пометку «цитирует пост»),
-ответ 200, описание YouTube 120 без ссылок и эмодзи. У X не больше 3 постов одного автора в таблице, остальные
+шортсы по просмотрам, топ-15; ответы X и Threads по лайкам, топ-20), режет текст: пост Reddit и X 250 символов, ответ 200, описание YouTube 120 без эмодзи.
+Ссылки из постов Reddit, X, ответов Threads и отрывков Google не режет и не считает в лимит: все целиком, рабочими,
+после текста («Ссылки: ...»). У X пост с цитатой помечен «ЦИТИРУЕТ: <ссылка>», внизу список цитат, которые надо открыть.
+В описаниях YouTube ссылки не выводятся (почти всегда реклама и соцсети автора). У X не больше 3 постов одного автора в таблице, остальные
 короткими строками под ней. Сверху таблица запросов с целью и числом новых уникальных.
 """
 import datetime as dt
@@ -23,19 +24,35 @@ NOW = dt.datetime.now(dt.timezone.utc)
 EMOJI = re.compile("[\U0001F000-\U0001FFFF☀-➿⬀-⯿️‍]")
 
 
-def short_link(m):
-    """Ссылку не выкидывать, а сжать до сайта и начала пути: в посте она бывает самым ценным."""
-    u = re.sub(r"^https?://(www\.)?", "", m.group(0)).rstrip(").,;")
-    return "" if u.startswith(("t.co/", "youtu", "bit.ly")) else u[:50]
+URL = re.compile(r"https?://[^\s<>\"'\]\[]+")
 
 
-def clean(text, n, links=False):
-    text = html.unescape(re.sub(r"https?://\S+", short_link if links else "", text or ""))
+def links_of(text):
+    """Все ссылки из текста целиком, рабочими, без дублей. Ссылки бывают самым ценным в посте: не резать и не считать в лимит."""
+    out = []
+    for u in URL.findall(html.unescape(text or "")):
+        u = u.rstrip(".,;:!?")
+        while u.endswith(")") and u.count(")") > u.count("("):
+            u = u[:-1]  # хвост markdown-ссылки [текст](адрес)
+        if u not in out and not u.startswith("https://t.co/"):
+            out.append(u)
+    return out
+
+
+def clean(text, n):
+    """Текст без ссылок (они идут отдельным списком), без эмодзи, обрезан до n символов."""
+    text = html.unescape(text or "")
+    text = re.sub(r"\[([^\]]*)\]\(https?://[^)]*\)", r"\1", text)  # markdown-ссылка: оставить подпись
+    text = URL.sub("", text)
     text = EMOJI.sub("", text)
     lines = [l.strip(" -•|►▬=_*") for l in text.splitlines()]
     text = " ".join(l for l in lines if len(l) > 2)
     text = re.sub(r"\s+", " ", text).strip()
     return (text[:n] + "…") if len(text) > n else text
+
+
+def with_links(text, links):
+    return text + ("" if not links else " Ссылки: " + " ".join(links))
 
 
 def age_days(iso):
@@ -91,18 +108,24 @@ def google_social(x):
         if d:
             age = {"hour": 0, "day": 1, "week": 7}[d.group(2)] * int(d.group(1))
     text = re.sub(r"^\s*([A-Z][a-z]{2} \d{1,2}, \d{4}|\d+ \w+ ago)\s*\.\.\.\s*", "", desc)
-    return key, dict(title=x.get("title", ""), where=("" if kind == "страница" else "@") + author, kind=kind, age=age, text=clean(text, 250), url=url)
+    return key, dict(title=x.get("title", ""), where=("" if kind == "страница" else "@") + author, kind=kind, age=age, text=with_links(clean(text, 250), links_of(text)), url=url)
 
 
 def x_tweet(x, n):
     """Твит из Apify scrape.badger (поиск, ответы, цепочка)."""
     created = x.get("created_at")
     age = (NOW - dt.datetime.strptime(created, "%a %b %d %H:%M:%S %z %Y")).days if created else ""
-    links = [u.get("expanded_url") for u in (x.get("urls") or []) if isinstance(u, dict) and u.get("expanded_url")]
-    links = [re.sub(r"^https?://(www\.)?", "", u)[:50] for u in links if not re.search(r"//(www\.)?(x|twitter)\.com/", u)][:2]
-    title = clean(x.get("full_text") or x.get("text"), n) + (" [цитирует пост]" if x.get("quoted_status_id") else "") + \
-        "".join(f" [{u}]" for u in links)
-    return dict(title=title, where="@" + (x.get("username") or ""),
+    quoted = str(x.get("quoted_status_id") or "")
+    links = []
+    for u in x.get("urls") or []:
+        u = u.get("expanded_url") if isinstance(u, dict) else None
+        if not u or u in links or (quoted and re.search(rf"/status/{quoted}\b", u)):
+            continue  # ссылка на цитируемый пост идёт отдельной пометкой
+        links.append(u)
+    extra = with_links("", links).strip()
+    if quoted:  # цитата — ответ на чужой пост: без него контекст непонятен
+        extra += f" ЦИТИРУЕТ: https://x.com/i/status/{quoted}"
+    return dict(title=clean(x.get("full_text") or x.get("text"), n), extra=extra.strip(), quoted=quoted, where="@" + (x.get("username") or ""),
                 sort=num(x.get("favorite_count")), replies=num(x.get("reply_count")), rts=num(x.get("retweet_count")),
                 marks=num(x.get("bookmark_count")), views=num(x.get("view_count")),
                 fol=short_num(num(x.get("user_followers_count"))), bio=clean(x.get("user_description"), 60), age=age,
@@ -143,13 +166,13 @@ for spec in specs:
             elif kind in ("xs", "xr"):
                 rec = x_tweet(x, 250 if kind == "xs" else 200)
             elif kind == "tr":
-                rec = dict(title=clean(x.get("text"), 200), where="@" + (x.get("authorUsername") or ""),
+                rec = dict(title=clean(x.get("text"), 200), extra=with_links("", links_of(x.get("text"))).strip(), where="@" + (x.get("authorUsername") or ""),
                            sort=num(x.get("likeCount")), replies=num(x.get("replyCount")), age=age_days(x.get("createdAt")),
                            url=x.get("url") or x.get("postUrl", ""))
             elif kind == "rd":
                 rec = dict(title=x["title"], where="r/" + x.get("subreddit", ""), sort=num(x.get("num_comments")),
                            ups=num(x.get("score")), age=age_days(x.get("created_at_iso")),
-                           text=clean(x.get("selftext"), 250, links=True), url=x.get("url") or ("https://www.reddit.com" + x["permalink"] if x.get("permalink") else "https://redd.it/" + x["id"]))
+                           text=with_links(clean(x.get("selftext"), 250), links_of(x.get("selftext"))), url=x.get("url") or ("https://www.reddit.com" + x["permalink"] if x.get("permalink") else "https://redd.it/" + x["id"]))
             else:
                 views, likes = num(x.get("viewCountInt")), num(x.get("likeCountInt"))
                 rec = dict(title=x["title"], where=(x.get("channel") or {}).get("title", ""), views=views, likes=likes,
@@ -169,7 +192,7 @@ for i, (plat, query, goal, found, new) in enumerate(queries, 1):
     out.append(f"| {i} | {PLAT[plat]} | {cell(query)} | {cell(goal)} | {found} | {new} |")
 
 X_HEAD = "| # | Запрос | Текст | Автор | Подписч. | О себе | Лайки | Ответы | Репосты | Закладки | Просм. | Дней |\n|---|---|---|---|---|---|---|---|---|---|---|---|"
-X_ROW = lambda i, r: (f"| {i} | {r['q']} | [{cell(r['title'])}]({r['url']}) | {r['where']} | {r['fol']} | {cell(r['bio'])} | "
+X_ROW = lambda i, r: (f"| {i} | {r['q']} | [{cell(r['title'])}]({r['url']}) {cell(r['extra'])} | {r['where']} | {r['fol']} | {cell(r['bio'])} | "
                       f"{r['sort']} | {r['replies']} | {r['rts']} | {r['marks']} | {r['views']} | {r['age']} |")
 sections = [
     ("rd", "Reddit", "| # | Запрос | Заголовок | Сабреддит | Комм. | Апвоуты | Дней | Начало поста |\n|---|---|---|---|---|---|---|---|",
@@ -179,7 +202,7 @@ sections = [
     ("xs", "X (по лайкам; не больше 3 постов одного автора)", X_HEAD, X_ROW),
     ("xr", "Ответы X (по лайкам, топ-20)", X_HEAD, X_ROW),
     ("tr", "Ответы Threads (по лайкам, топ-20)", "| # | Текст | Автор | Лайки | Ответы | Дней |\n|---|---|---|---|---|---|",
-     lambda i, r: f"| {i} | [{cell(r['title'])}]({r['url']}) | {r['where']} | {r['sort']} | {r['replies']} | {r['age']} |"),
+     lambda i, r: f"| {i} | [{cell(r['title'])}]({r['url']}) {cell(r['extra'])} | {r['where']} | {r['sort']} | {r['replies']} | {r['age']} |"),
     ("gs", "Выдача Google (цифр нет, порядок Google)", "| # | Запрос | Заголовок | Автор | Тип | Дней | Отрывок |\n|---|---|---|---|---|---|---|",
      lambda i, r: f"| {i} | {r['q']} | [{cell(r['title'][:80])}]({r['url']}) | {r['where']} | {r['kind']} | {r['age']} | {cell(r['text'])} |"),
     ("sh", "YouTube, шортсы", "| # | Запрос | Название | Просм. | Описание |\n|---|---|---|---|---|",
@@ -206,7 +229,12 @@ for kind, name, head, row in sections:
     out += [row(i, r) for i, r in enumerate(rows, 1)]
     if hidden:
         out += ["", "Ещё посты тех же авторов (не в таблице, но могут быть ценны):", ""]
-        out += [f"- {r['where']}, {r['sort']} лайков, {r['age']} дн.: [{cell(r['title'][:100])}]({r['url']})" for r in hidden]
+        out += [f"- {r['where']}, {r['sort']} лайков, {r['age']} дн.: [{cell(r['title'][:100])}]({r['url']}) {cell(r['extra'])}" for r in hidden]
+quotes = [r for k in ("xs", "xr") for r in items[k].values() if r.get("quoted")]
+if quotes:
+    out += ["", f"## Цитируемые посты: {len(quotes)}. Открыть до выводов (`sc.py v1/twitter/tweet url=...`, 1 кредит)", "",
+            "Пост с цитатой отвечает на чужой пост: без него смысл неясен. Открывать каждый, который рассматриваешь.", ""]
+    out += [f"- {r['where']} ({r['sort']} лайков, [пост]({r['url']})) цитирует https://x.com/i/status/{r['quoted']}" for r in quotes]
 if profiles:  # профиль открыть как пост нельзя; это зацепки, не посты
     out += ["", f"## Профили авторов: {len(profiles)} (зацепки, не посты)", ""]
     out += [f"- {r['where']} ({r['q']}): {cell(r['text'][:120])}" for r in profiles]
