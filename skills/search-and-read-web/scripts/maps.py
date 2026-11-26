@@ -167,6 +167,9 @@ def places_cmd(out, files, opt):
         out_lines += ["", f"## Мало отзывов (меньше {minimum}): не отсекаются, смотреть по смыслу", "",
                       "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
         out_lines += [line(i, p) for i, p in enumerate(few[:20], 1)]
+    ids = [p["id"] for p in main[:top] + few[:20] if p["id"] and p["id"] != "None"]
+    out_lines += ["", "## placeId мест из таблиц (для отзывов, шаг 4: взять только короткий список)", "",
+                  "`" + json.dumps(ids) + "`"]
     open(out, "w", encoding="utf-8").write("\n".join(out_lines) + "\n")
     print(f"{len(rows)} мест ({len(main)} в основной таблице, {len(few)} с малым числом отзывов) -> {out}")
 
