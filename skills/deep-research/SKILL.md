@@ -92,7 +92,7 @@ Roles:
   opinions (places, travel, food, products, tools, services, lifestyle, health practices) or the user asked for social
   media: Reddit threads in full, Instagram, TikTok, YouTube shorts and comments, Threads, X. Skip it for pure science,
   law or market data;
-- **Telegram** — only if the personal settings file (`~/.search-kit/my-config.md`) says Telegram is connected and
+- **Telegram** — only if the personal settings file (`my/my-config.md` (`my/` is the package's personal folder; `python -I "<skills folder>/social-capture/scripts/keys.py" where` prints its path)) says Telegram is connected and
   the user asked for it or the question is local to the user's country: a separate `social-researcher` with the
   subtopic "what people say in the user's Telegram chats and channels", following `{skills}/telegram-search/SKILL.md`;
 - **report writer** and **critic** — after research.

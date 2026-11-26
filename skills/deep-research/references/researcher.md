@@ -8,7 +8,7 @@ Your notes go to a report writer who does no research of their own, so they must
 Search exactly as the `search-and-read-web` skill says; do not invent your own rules. Before your first search read,
 in this order (paths from the deep-research skill folder):
 1. `../search-and-read-web/SKILL.md`;
-2. `../search-and-read-web/config.md`, then the personal `~/.search-kit/my-config.md` if it exists;
+2. `../search-and-read-web/config.md`, then the personal `my/my-config.md` (`my/` is the package's personal folder; `python -I "<skills folder>/social-capture/scripts/keys.py" where` prints its path) if it exists;
 3. only the references that SKILL.md points to for your kind of question (for example `references/youtube-reddit.md`,
    `references/x-threads.md`, `references/maps.md`, `references/tools-and-costs.md`).
 

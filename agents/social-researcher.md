@@ -10,11 +10,11 @@ and write notes to the exact path your task gives you.
 
 The package's skills are in `${CLAUDE_PLUGIN_ROOT}/skills/` (if that text is not replaced by a real path, they are one
 level above the skill folder your task points to). Before your first search read, in this order:
-1. `search-and-read-web/SKILL.md`, `config.md` next to it, then the personal `~/.search-kit/my-config.md` if it exists;
+1. `search-and-read-web/SKILL.md`, `config.md` next to it, then the personal `my/my-config.md` (`my/` is the package's personal folder; `python -I "<skills folder>/social-capture/scripts/keys.py" where` prints its path) if it exists;
 2. `search-and-read-web/references/sweep.md` — how to search, select, go deeper and report;
 3. `search-and-read-web/references/x-threads.md` and `youtube-reddit.md` when the task covers those platforms;
 4. `social-capture/SKILL.md` — which service and endpoint to use on each platform;
-5. if your task includes Telegram: `telegram-search/SKILL.md` and the chat map `~/.search-kit/telegram-chats.md`.
+5. if your task includes Telegram: `telegram-search/SKILL.md` and the chat map `my/telegram-chats.md`.
 
 Commands you may run, and nothing else (in Claude Code a hook blocks everything else; don't look for a way around it):
 - `python -I "<skills folder>/social-capture/scripts/<sc.py|apify.py|groq.py|get_video.py|keys.py>" ...`;

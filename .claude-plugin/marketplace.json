@@ -9,7 +9,7 @@
       "name": "search-kit",
       "source": "./",
       "description": "Web and community search with sources, social post capture and deep research. Run the setup skill after installing.",
-      "version": "0.9.0"
+      "version": "0.10.0"
     }
   ]
 }

@@ -28,6 +28,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent  # корень пакета: skills/, agents/, hooks/
 HELPERS = {"researcher", "social-researcher"}
 SKILLS = ("search-and-read-web", "social-capture", "deep-research", "telegram-search", "search-kit-setup")
+
+
+def my_dirs():
+    """Личные папки пакета: my/ рядом с пакетом, my/ клона из kit-home.txt (плагин работает из копии), ~/.search-kit."""
+    dirs = {ROOT / "my", Path.home() / ".search-kit"}
+    marker = ROOT / "skills" / "social-capture" / "kit-home.txt"
+    try:
+        if marker.is_file():
+            dirs.add(Path(marker.read_text(encoding="utf-8-sig").strip()) / "my")
+    except OSError:
+        pass
+    return {str(d).replace("\\", "/").lower().rstrip("/") + "/" for d in dirs}
+
+
+MY_DIRS = my_dirs()
+
+
+def in_my(p):
+    low = p.lower()
+    return any(low.startswith(d) for d in MY_DIRS)
 RESEARCH_DIRS = {"research", "research_notes", "reports"}
 APIFY_LIMIT_USD = 0.5
 
@@ -89,7 +109,7 @@ def write_ok(path, cwd):
         return False
     p = norm(path, cwd)
     ps = parts(p)
-    if ".." in ps or ".claude" in ps or ".search-kit" in ps or ".codex" in ps or SECRET_FILES.search(p):
+    if ".." in ps or ".claude" in ps or ".search-kit" in ps or ".codex" in ps or SECRET_FILES.search(p) or in_my(p):
         return False
     return bool(RESEARCH_DIRS & set(ps[:-1])) or is_temp(p)
 
@@ -110,10 +130,9 @@ def read_ok(path, cwd):
     ps = parts(p)
     if ".." in ps or SECRET_FILES.search(p) or SECRET_FILES_CASE.search(p):
         return False
-    if in_skills(p) or bool(RESEARCH_DIRS & set(ps)):
-        return True
-    home_kit = (str(Path.home()).replace("\\", "/") + "/.search-kit/").lower()
-    return p.lower().startswith(home_kit) and ps[-1].endswith(".md")  # личные настройки и карта чатов, не JSON
+    if in_my(p):  # личная папка: только настройки и карта чатов (.md), не ключи и не JSON входа в Telegram
+        return ps[-1].endswith(".md")
+    return in_skills(p) or bool(RESEARCH_DIRS & set(ps))
 
 
 def trusted_script(token, cwd):
@@ -293,7 +312,7 @@ def decide(data):
         if tool == "Glob" and (pattern.startswith(("/", "~")) or re.match(r"^[a-zA-Z]:", pattern)):
             targets.append(pattern)
         bad = [p for p in targets if not read_ok(p, cwd)]
-        return (f"помощник читает только скилы пакета, личные настройки (~/.search-kit/*.md) и папку исследования, "
+        return (f"помощник читает только скилы пакета, личные настройки (my/*.md пакета) и папку исследования, "
                 f"не {bad[0]!r}; нужен другой файл — пусть его прочитает основной чат") if bad else None
     if tool.startswith("mcp__") and SEND_VERBS.search(tool.split("__")[-1]):
         return f"инструмент {tool} может что-то отправить или изменить — помощнику запрещён"

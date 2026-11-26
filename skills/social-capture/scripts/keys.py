@@ -1,22 +1,30 @@
-"""Где скрипты search-kit берут ключи сервисов. Значения ключей никогда не печатаются.
+"""Где скрипты search-kit берут личные данные и ключи сервисов. Значения ключей никогда не печатаются.
 
-Порядок поиска для каждого ключа:
-1. файл ключей — первый существующий из списка: путь в переменной SEARCH_KIT_CREDENTIALS,
-   ~/.search-kit/credentials.md, ~/.search-kit/.env (сюда пишет хранилище секретов BB:
-   `bb secret request ИМЯ --write-env ~/.search-kit/.env`), ~/.claude/credentials.md; строка вида ИМЯ=значение;
-2. переменная окружения с тем же именем (запасной путь для оболочек без файла ключей).
+Личные данные пакета (настройки, карта чатов, ключи) — в папке my/ внутри папки пакета (копия репозитория);
+my/ в git не попадает, образец — my.example/. Как скрипт находит my/:
+1. переменная окружения SEARCH_KIT_HOME;
+2. файл kit-home.txt в папке скила (адрес пакета; его кладёт tools/install.py, копии скилов в BB и в плагине
+   Claude Code везут его с собой);
+3. скрипт запущен прямо из папки пакета: <пакет>/my;
+4. иначе ~/.search-kit (старые установки).
+
+Ключ ищется так (как у last30days): переменная окружения с тем же именем -> my/.env -> общий файл ключей,
+указанный в my/.env строкой KEYS_FILE=<путь> (или в переменной SEARCH_KIT_KEYS_FILE). Строки вида ИМЯ=значение.
+Уже настроенные ключи (переменные среды, свой общий файл) вводить заново не нужно.
 Облачная сессия Claude Code (CLAUDE_CODE_REMOTE=true) без ключа: запрос уходит без ключа, его добавляет прокси.
 
+python -I keys.py where        — где папка личных данных и файлы ключей
 python -I keys.py check        — какие ключи найдены и где (без значений)
 python -I keys.py test         — работают ли ключи (бесплатные запросы, без значений)
 python -I keys.py add-missing [keenable tavily firecrawl]
-                               — дописать пустые строки для недостающих ключей (и ключей этих подключений)
+                               — дописать пустые строки для недостающих ключей
 """
 import os
 import re
 import sys
 from pathlib import Path
 
+ENV = "." + "env"
 NAMES = {
     "SCRAPECREATORS_API_KEY": "ScrapeCreators (Google, Reddit, YouTube, Threads, посты соцсетей)",
     "APIFY_TOKEN": "Apify (X, ответы Threads, карты)",
@@ -26,14 +34,49 @@ NAMES = {
 OPTIONAL = {"keenable": "KEENABLE_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY"}
 
 
+def kit_home(skill_dir=None):
+    """Папка личных данных пакета (my/)."""
+    if os.environ.get("SEARCH_KIT_HOME"):
+        return Path(os.environ["SEARCH_KIT_HOME"]).expanduser()
+    here = Path(__file__).resolve()
+    dirs = [Path(skill_dir)] if skill_dir else []
+    dirs += [Path(__file__).absolute().parents[1], here.parents[1]]
+    for d in dirs:
+        marker = d / "kit-home.txt"
+        if marker.is_file():
+            root = Path(marker.read_text(encoding="utf-8-sig").strip()).expanduser()
+            if root.is_dir():
+                return root / "my"
+    root = here.parents[3]
+    if (root / "my.example").is_dir():
+        return root / "my"
+    return Path.home() / ".search-kit"
+
+
+def common_file():
+    """Общий файл ключей: переменная SEARCH_KIT_KEYS_FILE или строка KEYS_FILE=<путь> в my/.env."""
+    common = os.environ.get("SEARCH_KIT_KEYS_FILE")
+    own = kit_home() / ENV
+    if not common and own.is_file():
+        m = re.search(r"^[ \t]*KEYS_FILE[ \t]*=[ \t]*['\"]?([^'\"\r\n]+?)['\"]?[ \t]*$",
+                      own.read_text(encoding="utf-8-sig", errors="replace"), re.M)
+        common = m.group(1) if m else None
+    return Path(common).expanduser() if common else None
+
+
 def files():
+    """Файлы ключей по порядку: my/.env, затем общий файл (KEYS_FILE)."""
     found = []
-    custom = os.environ.get("SEARCH_KIT_CREDENTIALS")
-    for p in ([Path(custom).expanduser()] if custom else []) + [
-            Path.home() / ".search-kit" / "credentials.md", Path.home() / ".search-kit" / ".env",
-            Path.home() / ".claude" / "credentials.md"]:
-        if p.is_file() and p not in found:
-            found.append(p)
+    own = kit_home() / ENV
+    if own.is_file():
+        found.append(own)
+    common = common_file()
+    if common and common.is_file() and common not in found:
+        found.append(common)
+    if not found:  # старая установка без my/
+        for p in (Path.home() / ".search-kit" / ENV, Path.home() / ".search-kit" / "credentials.md"):
+            if p.is_file():
+                found.append(p)
     return found
 
 
@@ -49,14 +92,14 @@ def _from_text(name, text):
 
 
 def find(name):
-    """(значение, откуда) или (None, None)."""
+    """(значение, откуда) или (None, None). Переменная окружения первой: уже настроенный ключ не вводить заново."""
+    value = os.environ.get(name)
+    if value:
+        return value, "переменная окружения"
     for p in files():
         value = _from_text(name, p.read_text(encoding="utf-8-sig", errors="replace"))
         if value:
             return value, str(p)
-    value = os.environ.get(name)
-    if value:
-        return value, "переменная окружения"
     return None, None
 
 
@@ -70,15 +113,14 @@ def require(name):
     if value or remote():
         return value
     sys.exit(f"Нет ключа {name} ({NAMES.get(name, name)}). Впишите строку {name}=... в файл ключей "
-             f"(~/.search-kit/credentials.md; в BB ключи пишет форма секретов в ~/.search-kit/.env) или задайте "
-             f"переменную окружения. Настройка по шагам — скил search-kit-setup.")
+             f"{common_file() or kit_home() / ENV} или задайте переменную окружения. "
+             f"Настройка по шагам — скил search-kit-setup.")
 
 
 def add_missing(extra=()):
     """Дописать пустые строки ИМЯ= для недостающих ключей в файл ключей (создать файл, если его нет). Значения не читает
     вслух и не трогает существующие строки."""
-    existing = files()
-    target = existing[0] if existing else Path.home() / ".search-kit" / "credentials.md"
+    target = common_file() or kit_home() / ENV  # общий файл, если указан, иначе my/env
     missing = [n for n in NAMES if not find(n)[0]] + [
         OPTIONAL[s] for s in extra if s in OPTIONAL and not find(OPTIONAL[s])[0]]
     if not missing:
@@ -94,7 +136,7 @@ def add_missing(extra=()):
     else:
         print(f"Файл ключей: {target}\nСтроки уже есть, но пустые: {', '.join(missing)}.")
     print("Откройте файл сами в Блокноте (Win+R, затем: notepad <путь выше>; на Mac: open -e <путь>), вставьте ключи "
-          "после «=» и сохраните. Агенту файл не показывайте: охранник ему это и не даст.")
+          "после «=» и сохраните. Агенту файл не показывайте: охранник ему это и не даст. Есть свой общий файл ключей — вместо этого впишите в my/.env строку KEYS_FILE=<путь к нему>.")
 
 
 def test():
@@ -133,10 +175,14 @@ if __name__ == "__main__":
         add_missing(cmd[1:])
     elif cmd == ["test"]:
         test()
+    elif cmd == ["where"]:
+        print("Папка личных данных:", kit_home())
+        print("Общий файл ключей:", common_file() or "не указан")
+        print("Файлы ключей:", ", ".join(str(p) for p in files()) or "не найдены")
     elif cmd == ["check"]:
         print("Файлы ключей:", ", ".join(str(p) for p in files()) or "не найдены")
         for name, what in NAMES.items():
             _, where = find(name)
             print(f"{name}: {'есть, ' + where if where else 'НЕТ'} — {what}")
     else:
-        sys.exit("python -I keys.py check | test | add-missing [keenable tavily firecrawl]")
+        sys.exit("python -I keys.py where | check | test | add-missing [keenable tavily firecrawl]")

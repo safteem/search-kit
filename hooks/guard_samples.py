@@ -15,6 +15,7 @@ RES = "X:/work/research/Тема/raw"
 TMP = tempfile.gettempdir().replace("\\", "/")
 HOME = str(Path.home()).replace("\\", "/")
 W = "X:/work"
+MY = str(Path(__file__).resolve().parent.parent / "my").replace("\\", "/")
 
 
 def bash(cmd, agent=None):
@@ -52,6 +53,8 @@ ALLOW = [
     tool("Write", RS, file_path="research/Тема/notes/b.md"),
     tool("Read", RS, file_path=f"{S}/search-and-read-web/SKILL.md"),
     tool("Read", RS, file_path=f"{HOME}/.search-kit/my-config.md"),
+    tool("Read", RS, file_path=f"{MY}/my-config.md"),
+    tool("Read", RS, file_path=f"{MY}/telegram-chats.md"),
     tool("Read", RS, file_path="X:/work/research/Тема/notes/a.md"),
     tool("mcp__tavily__tavily_search", RS, query="x"),
     tool("mcp__keenable__search_web_pages", RS, query="x"),
@@ -91,6 +94,9 @@ DENY = [
     tool("Edit", SR, file_path=f"{S}/search-and-read-web/SKILL.md"),
     tool("Read", RS, file_path=f"{HOME}/Documents/private.md"),
     tool("Read", RS, file_path=f"{HOME}/.search-kit/telegram.json"),
+    tool("Read", RS, file_path=f"{MY}/telegram.json"),
+    tool("Write", RS, file_path=f"{MY}/my-config.md"),
+    tool("Edit", RS, file_path=f"{MY}/research/x.md", old_string="a", new_string="b"),
     tool("Glob", RS, pattern="**/*.md", path=f"{HOME}/Documents"),
     tool("mcp__telegram__send_message", SR, chat_id=1, text="x"),
     tool("mcp__notion__notion-create-pages", RS),

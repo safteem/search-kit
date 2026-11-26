@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "social-capture" / "scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # копия в ~/.search-kit/bin/ рядом с keys.py
 import keys  # noqa: E402
 
 SERVICES = {"keenable": "KEENABLE_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY"}

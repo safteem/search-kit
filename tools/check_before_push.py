@@ -2,7 +2,7 @@
 
 python -I tools/check_before_push.py          — проверить все файлы под git (и новые, ещё не добавленные)
 Код выхода 1, если что-то нашлось. Совпадения печатаются с маской, без значения ключа.
-Свои личные слова (имя, город) можно добавить в файл ~/.search-kit/private-words.txt, по одному в строке.
+Свои личные слова (имя, город) можно добавить в файл my/private-words.txt, по одному в строке.
 """
 import re
 import subprocess
@@ -28,9 +28,10 @@ def files():
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     words = PERSONAL[:]
-    extra = Path.home() / ".search-kit" / "private-words.txt"
-    if extra.is_file():
-        words += [re.escape(w.strip()) for w in extra.read_text(encoding="utf-8").splitlines() if w.strip()]
+    for extra in (ROOT / "my" / "private-words.txt", Path.home() / ".search-kit" / "private-words.txt"):
+        if extra.is_file():
+            words += [re.escape(w.strip()) for w in extra.read_text(encoding="utf-8").splitlines()
+                      if w.strip() and not w.lstrip().startswith("#")]
     personal = re.compile("|".join(words), re.I)
     found = 0
     for f in files():

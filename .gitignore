@@ -1,15 +1,24 @@
-# Ключи и личное никогда не попадают в репозиторий
+# Личная папка: настройки, ключи, карта чатов, резервные копии. Никогда не попадает в репозиторий.
+my/
+
+# Ключи и личное в любом другом месте пакета тоже не попадают
 credentials.md
 **/credentials.md
 .env
 .env.*
-!.env.example
 *.session
 *.session-journal
-my-config.md
 telegram.json
+my-config.md
 telegram-chats.md
 private-words.txt
+# ...кроме образцов с пустыми полями
+!my.example/
+!my.example/**
+
+# Пишет установщик: адрес пакета в каждом скиле и правила помощников для deep-research
+skills/*/kit-home.txt
+skills/deep-research/agents/
 
 # Результаты поиска и временное
 research/

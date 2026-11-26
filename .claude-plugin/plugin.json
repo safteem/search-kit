@@ -1,7 +1,7 @@
 {
   "name": "search-kit",
   "displayName": "Search Kit",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Web and community search that brings a ready answer with sources: Google and Keenable as the base, YouTube, Reddit, X, Threads, maps, shopping platforms, GitHub and Telegram by the signs of the question; post capture from social media; deep research with helpers and a critic. Built on free tiers.",
   "author": {
     "name": "search-kit authors"
