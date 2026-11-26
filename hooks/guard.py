@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # корень пакета: skills/, agents/, hooks/
 HELPERS = {"researcher", "social-researcher"}
-SKILLS = ("search-and-read-web", "social-capture", "deep-research", "telegram-search", "setup")
+SKILLS = ("search-and-read-web", "social-capture", "deep-research", "telegram-search", "search-kit-setup")
 RESEARCH_DIRS = {"research", "research_notes", "reports"}
 APIFY_LIMIT_USD = 0.5
 
@@ -46,6 +46,8 @@ TOOLS_READ = {"Read", "Glob", "Grep", "LS"}
 SEND_VERBS = re.compile(r"(^|[_\-])(send|post|publish|forward|reply|comment|share|upload|submit|broadcast|tweet|"
                         r"create|delete|update|write|push|edit|remove|join|leave)", re.I)
 FORBIDDEN_CHARS = set(";&|`$<>\n\r")
+# форма секретов BB: человек вводит ключи в окне BB, команда только пишет их в файл и ничего не выводит
+BB_SECRET = re.compile(r"^\s*(\S*[/\\])?bb(\.cmd|\.exe)?\s+secret\s+request\s", re.I)
 PYTHON = re.compile(r"^(.*/)?(python3?|py)(\.exe)?$", re.I)
 COMMON_SCRIPTS = {"sc.py", "apify.py", "summary.py", "post.py", "maps.py", "gh_repos.py", "yt_live.py", "keys.py"}
 SOCIAL_SCRIPTS = COMMON_SCRIPTS | {"groq.py", "get_video.py", "tg_search.py"}
@@ -264,6 +266,8 @@ def decide(data):
         command = str(inp.get("command", ""))
         if isinstance(inp.get("command"), list):
             command = " ".join(map(str, inp["command"]))
+        if BB_SECRET.match(command) and not any(ch in FORBIDDEN_CHARS for ch in command):
+            return None
         if SECRET_FILES.search(command) or SECRET_FILES_CASE.search(command):
             return ("команда упоминает файл с секретами (credentials.md, .env, сессии). Ключи читают только "
                     "скрипты и подключения сами; если это нужно человеку — пусть выполнит сам.")

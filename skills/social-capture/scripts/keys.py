@@ -22,7 +22,7 @@ NAMES = {
     "APIFY_TOKEN": "Apify (X, ответы Threads, карты)",
     "GROQ_API_KEY": "Groq (расшифровка речи)",
 }
-# ключи подключений MCP — только если подключение ставит скил setup (по имени сервиса, не ключа)
+# ключи подключений MCP — только если подключение ставит скил search-kit-setup (по имени сервиса, не ключа)
 OPTIONAL = {"keenable": "KEENABLE_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY"}
 
 
@@ -70,17 +70,15 @@ def require(name):
     if value or remote():
         return value
     sys.exit(f"Нет ключа {name} ({NAMES.get(name, name)}). Впишите строку {name}=... в файл ключей "
-             f"(~/.claude/credentials.md или ~/.search-kit/credentials.md) или задайте переменную окружения. "
-             f"Настройка по шагам — скил setup.")
+             f"(~/.search-kit/credentials.md; в BB ключи пишет форма секретов в ~/.search-kit/.env) или задайте "
+             f"переменную окружения. Настройка по шагам — скил search-kit-setup.")
 
 
 def add_missing(extra=()):
     """Дописать пустые строки ИМЯ= для недостающих ключей в файл ключей (создать файл, если его нет). Значения не читает
     вслух и не трогает существующие строки."""
     existing = files()
-    target = existing[0] if existing else (
-        Path.home() / ".claude" / "credentials.md" if (Path.home() / ".claude").is_dir()
-        else Path.home() / ".search-kit" / "credentials.md")
+    target = existing[0] if existing else Path.home() / ".search-kit" / "credentials.md"
     missing = [n for n in NAMES if not find(n)[0]] + [
         OPTIONAL[s] for s in extra if s in OPTIONAL and not find(OPTIONAL[s])[0]]
     if not missing:

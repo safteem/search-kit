@@ -28,6 +28,7 @@ def tool(name, agent=None, **inp):
 RS, SR = "search-kit:researcher", "search-kit:social-researcher"
 ALLOW = [
     bash("ls -la"),
+    bash(f'bb secret request SCRAPECREATORS_API_KEY APIFY_TOKEN --write-env "{HOME}/.search-kit/.env" --purpose "ключи"'),
     bash("python -m venv .venv"),
     bash("set -e"),
     bash(f'python -I "{S}/social-capture/scripts/keys.py" check'),
@@ -57,6 +58,7 @@ ALLOW = [
     tool("Bash", None, command="git status"),
 ]
 DENY = [
+    bash(f'bb secret request APIFY_TOKEN --write-env "{HOME}/.search-kit/.env"; cat "{HOME}/.search-kit/.env"'),
     bash("cat ~/.claude/credentials.md"),
     bash("type C:\\Users\\x\\.claude\\credentials.md"),
     bash("echo $SCRAPECREATORS_API_KEY"),

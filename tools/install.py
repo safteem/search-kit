@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 SRC = Path(__file__).resolve().parent.parent / "skills"
 SKIP = shutil.ignore_patterns("__pycache__", "*.pyc", "research")
 AGENTS = SRC.parent / "agents"
@@ -35,6 +36,10 @@ def main():
     for skill in sorted(p for p in SRC.iterdir() if (p / "SKILL.md").is_file()):
         dest = target / skill.name
         if dest.exists() or dest.is_symlink():
+            ours = (dest / "SKILL.md").is_file() and "search-kit" in (dest / "SKILL.md").read_text(encoding="utf-8", errors="ignore")
+            if not ours:
+                print(f"{skill.name}: ВНИМАНИЕ, в {dest} лежит чужой скил с тем же именем (в нём нет упоминания search-kit). "
+                      "Он тоже уйдёт в резервную папку; если он нужен, переименуйте его до установки.")
             print(f"{skill.name}: старая версия → {backup / skill.name}")
             if not dry:
                 backup.mkdir(parents=True, exist_ok=True)
