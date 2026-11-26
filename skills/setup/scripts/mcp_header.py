@@ -9,11 +9,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "social-capture" / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # копия в ~/.search-kit/bin/ рядом с keys.py
 import keys  # noqa: E402
 
 SERVICES = {"keenable": "KEENABLE_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY"}
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     if len(sys.argv) != 2 or sys.argv[1] not in SERVICES:
         sys.exit("python -I mcp_header.py " + "|".join(SERVICES))
     value, _ = keys.find(SERVICES[sys.argv[1]])

@@ -1,0 +1,46 @@
+"""Установка и обновление скилов search-kit в папку скилов любой оболочки (BB, Codex, Pi, Cursor и т. п.).
+
+python -I tools/install.py <папка скилов> [--dry-run]
+
+Примеры папок: BB — ~/.bb/skills; Codex — ~/.codex/skills; общая для агентов — ~/.agents/skills.
+Claude Code ставит пакет плагином (README), этот скрипт для него не нужен.
+
+Что делает: копирует каждую папку из skills/ пакета в <папку скилов>/<имя>. Если там уже есть папка с таким
+именем, сначала переносит её в ~/.search-kit/backups/<дата-время>/<имя> (откат: вернуть папку обратно).
+Чужие скилы в папке не трогает. Кэш Python и данные прогонов (research, data) не копирует.
+Повторный запуск после `git pull` — это и есть обновление.
+"""
+import datetime as dt
+import shutil
+import sys
+from pathlib import Path
+
+sys.stdout.reconfigure(encoding="utf-8")
+SRC = Path(__file__).resolve().parent.parent / "skills"
+SKIP = shutil.ignore_patterns("__pycache__", "*.pyc", "research", "data")
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if len(args) != 1:
+        sys.exit(__doc__)
+    dry = "--dry-run" in sys.argv
+    target = Path(args[0]).expanduser()
+    if not target.is_dir():
+        sys.exit(f"Нет папки {target}. Проверьте путь: папку скилов создаёт сама оболочка.")
+    backup = Path.home() / ".search-kit" / "backups" / dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    for skill in sorted(p for p in SRC.iterdir() if (p / "SKILL.md").is_file()):
+        dest = target / skill.name
+        if dest.exists() or dest.is_symlink():
+            print(f"{skill.name}: старая версия → {backup / skill.name}")
+            if not dry:
+                backup.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(dest), str(backup / skill.name))
+        print(f"{skill.name}: ставлю в {dest}")
+        if not dry:
+            shutil.copytree(skill, dest, ignore=SKIP)
+    print("Готово (пробный прогон, ничего не менял)." if dry else
+          "Готово. Перезапустите треды оболочки, чтобы она увидела новые скилы.")
+
+
+main()

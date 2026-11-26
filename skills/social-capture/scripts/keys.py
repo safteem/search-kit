@@ -38,7 +38,7 @@ def files():
 
 
 def _from_text(name, text):
-    m = re.search(rf"^\s*{name}\s*=\s*['\"`]?([^\s'\"`]+)", text, re.M)
+    m = re.search(rf"^[ \t]*{name}[ \t]*=[ \t]*['\"`]?([^\s'\"`]+)", text, re.M)
     if m:
         return m.group(1)
     if name == "APIFY_TOKEN":  # токен Apify узнаётся по началу apify_api_, как бы ни была подписана строка
@@ -89,10 +89,14 @@ def add_missing(extra=()):
     target.parent.mkdir(parents=True, exist_ok=True)
     text = target.read_text(encoding="utf-8-sig") if target.exists() else (
         "# Ключи сервисов. Вписывайте значения сами, в текстовом редакторе; агенту их не показывайте.\n")
-    lines = "".join(f"{n}=\n" for n in missing if not re.search(rf"^\s*{n}\s*=", text, re.M))
+    lines = "".join(f"{n}=\n" for n in missing if not re.search(rf"^[ \t]*{n}[ \t]*=", text, re.M))
     if lines:
         target.write_text(text.rstrip("\n") + "\n\n# search-kit\n" + lines, encoding="utf-8")
-    print(f"Файл ключей: {target}\nДописаны пустые строки: {', '.join(missing)}. Откройте файл в редакторе и вставьте ключи после «=».")
+        print(f"Файл ключей: {target}\nДописаны пустые строки: {', '.join(missing)}.")
+    else:
+        print(f"Файл ключей: {target}\nСтроки уже есть, но пустые: {', '.join(missing)}.")
+    print("Откройте файл сами в Блокноте (Win+R, затем: notepad <путь выше>; на Mac: open -e <путь>), вставьте ключи "
+          "после «=» и сохраните. Агенту файл не показывайте: охранник ему это и не даст.")
 
 
 def test():
@@ -103,11 +107,16 @@ def test():
         "SCRAPECREATORS_API_KEY": ("https://api.scrapecreators.com/v1/account/credit-balance", "x-api-key", "{}"),
         "APIFY_TOKEN": ("https://api.apify.com/v2/users/me", "Authorization", "Bearer {}"),
         "GROQ_API_KEY": ("https://api.groq.com/openai/v1/models", "Authorization", "Bearer {}"),
+        "TAVILY_API_KEY": ("https://api.tavily.com/usage", "Authorization", "Bearer {}"),
+        "FIRECRAWL_API_KEY": ("https://api.firecrawl.dev/v1/team/credit-usage", "Authorization", "Bearer {}"),
     }
+    optional = {"TAVILY_API_KEY", "FIRECRAWL_API_KEY"}
+    print("KEENABLE_API_KEY: отдельной бесплатной проверки нет; Keenable работает и без ключа (с лимитом), "
+          "проверяется пробным поиском")
     for name, (url, header, fmt) in checks.items():
         value, _ = find(name)
         if not value:
-            print(f"{name}: НЕТ ключа")
+            print(f"{name}: НЕТ ключа" + (" (нужен, только если подключение ставили с ключом из файла)" if name in optional else ""))
             continue
         req = urllib.request.Request(url, headers={header: fmt.format(value), "User-Agent": "search-kit/1.0"})
         try:
