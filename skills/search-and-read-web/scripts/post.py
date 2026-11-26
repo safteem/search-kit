@@ -60,11 +60,28 @@ def sc_tweet(d):
         print("\n".join(t(b.get("text")) for b in blocks if b.get("text")))
 
 
+B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+
+def th_code(pk):
+    """Числовой номер поста Threads -> код в адресе (/post/<код>): тот же номер в 64-ричной записи."""
+    n, s = int(pk), ""
+    while n:
+        n, r = divmod(n, 64)
+        s = B64[r] + s
+    return s
+
+
 def th_item(p):
     info = p.get("text_post_app_info") or {}
+    parent = ""
+    if info.get("is_reply") and info.get("reply_to_post_id"):  # ответ в ветке: ссылка на родителя, чтобы подняться к корню
+        parent = (f"https://www.threads.com/@{(info.get('reply_to_author') or {}).get('username', '')}/post/"
+                  f"{th_code(info['reply_to_post_id'])}")
     return dict(code=p.get("code"), user=(p.get("user") or {}).get("username", ""), likes=p.get("like_count") or 0,
                 replies=info.get("direct_reply_count") or 0, text=t((p.get("caption") or {}).get("text")),
-                day=day(p.get("taken_at")))
+                day=day(p.get("taken_at")), parent=parent,
+                root_user=(info.get("root_post_author") or {}).get("username", ""))
 
 
 def show_replies(reps):
@@ -132,6 +149,10 @@ for i, code in enumerate(shown):
         print("\n" + "=" * 60 + "\n")
     print(f"# Threads @{post['user']}, {post['day']} — https://www.threads.com/@{post['user']}/post/{code}")
     print(f"лайки {post['likes']} · ответы {post['replies']}\n\n{post['text']}")
+    if post.get("parent"):
+        print(f"\nЭТО ОТВЕТ В ВЕТКЕ (корень у @{post.get('root_user') or '?'}). Родитель: {post['parent']}\n"
+              "Открыть родителя (`sc.py v1/threads/post`) и повторять, пока пост не перестанет быть ответом: это корень. "
+              "Ответы корня целиком — Apify по ссылке корня.")
     chain = [c for c in chains.get(code, []) if c["user"] == post["user"] and c["code"] != code]
     if chain:
         print(f"\n## Цепочка автора: ещё {len(chain)} частей\n")
