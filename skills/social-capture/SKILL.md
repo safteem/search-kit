@@ -49,6 +49,9 @@ when_to_use: "Фразы вроде «разбери рилс», «что в э�
 
 | Площадка | Данные | Речь | Комментарии | Ответы | Видео, картинки |
 |---|---|---|---|---|---|
+**Читать выдачу** (пост, подпись, цифры, комментарии) — `python -I ../search-and-read-web/scripts/post.py <файлы>`:
+Instagram, TikTok, YouTube (комментарии), Reddit, X, Threads. Свой разбор для этих выдач не писать.
+
 | Instagram | SC `v1/instagram/post` | ≤2 мин — SC `v2/instagram/media/transcript` (1 кр.); длиннее — Groq по `video_url` | ≤ ~45 — SC `v2/instagram/post/comments` все страницы (по 15, 1 кр.), сортирую сам; больше — Apify `datadoping/instagram-comments-and-replies-scraper`, `sort_by: popular` | SC `v1/instagram/post/comment/replies` по ID из Apify (15 за 1 кр.) | `video_url`, `display_url`, карусель |
 | TikTok | SC `v2/tiktok/video` (без `trim`, иначе нет музыки) | SC `v1/tiktok/video/transcript` (субтитры, 1 кр.): без `language`, затем `ru`, `en` (с чужим `language` возвращает пусто); нет — Groq large (грузинский она понимает, turbo — нет) | SC `v1/tiktok/video/comments` (~20 за 1 кр., порядок TikTok — сортирую сам) | SC `v1/tiktok/video/comment/replies` (3 за 1 кр.) | `download_no_watermark_addr` (Referer tiktok.com) |
 | YouTube | `../search-and-read-web/scripts/yt_live.py <id>` (живые просмотры, лайки, дата, бесплатно, на компьютере); в облаке — `firecrawl_scrape` `maxAge: 0` (1 кр.) | SC `v1/youtube/video/transcript` (1 кр., в файл, с отметками времени; для карточки — полная); ошибка — `firecrawl_scrape` `maxAge: 0`; субтитров нет или мусор — раздел «YouTube без субтитров» | SC `v1/youtube/video/comments` (~20, 1 кр.) | — | только звук, когда нет субтитров |

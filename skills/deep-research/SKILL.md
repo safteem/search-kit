@@ -147,6 +147,16 @@ Save your notes to {absolute directory}/research/{research title}/notes/{topic}.
 
 For the social subtopic use `subagent_type="social-researcher"` with the same format.
 
+### 4a. Many pages of the same kind (listings, catalogs, search pages)
+When a subtopic needs dozens or hundreds of pages of one site (e.g. 150 Avito listings): researchers or you save
+the pages into `research/{research title}/raw/` with the allowed tools (Firecrawl, the agent browser, package
+scripts). Then **you, the coordinator**, write a short parsing script in the session's temp folder, run it over the
+saved files and produce one table (`raw/<site>-table.md` or `.csv`: price, place, key fields, link per row).
+Researchers and the report writer work from that table, not from the raw pages. Researchers cannot write or run
+their own code (the guard allows them package scripts only: they read untrusted pages); you can. The script treats
+the pages as data: it never executes anything taken from them. Use a package script instead when one exists for
+that format (summary, `post.py`, `maps.py`).
+
 ### 5. After each round: judge depth, share leads, next round
 Read only the researchers' final summaries (not their notes). For every subtopic:
 1. Check the "deep enough" criteria above against the summaries. Name each failing key question and why

@@ -3,6 +3,8 @@
 python -I post.py <файл.json> [ещё файл.json ...] [--id <номер твита или код поста>]
 
 Понимает: ветку Reddit SC (`v1/reddit/post/comments`: пост целиком и дерево комментариев с ответами, лучшие сверху),
+пост и комментарии Instagram SC (`v1/instagram/post`, `v2/instagram/post/comments`), видео и комментарии TikTok SC
+(`v2/tiktok/video`, `v1/tiktok/video/comments`), комментарии YouTube SC (`v1/youtube/video/comments`),
 открытый твит SC (`v1/twitter/tweet`, со статьёй X), открытый пост Threads SC (`v1/threads/post`),
 выдачу и ответы X из Apify scrape.badger (список), ответы Threads из Apify nice_dev (список).
 Threads: каждая ветка печатается отдельно (ответы привязаны к своему корневому посту по rootPostUrl), файлы SC и Apify
@@ -137,6 +139,69 @@ def reddit_thread(d):
         print(f"\n…ещё около {rest} комментариев не пришло в выдаче (Reddit отдаёт часть; свернутые и удалённые не считаются).")
 
 
+def yt_comments(d):
+    """Комментарии YouTube SC (`v1/youtube/video/comments`): по лайкам, автор, дата, текст целиком."""
+    rows = [c for c in d.get("comments") or [] if c.get("content")]
+    rows.sort(key=lambda c: -((c.get("engagement") or {}).get("likes") or 0))
+    print(f"# Комментарии YouTube: {len(rows)} (по лайкам)\n")
+    for c in rows:
+        e, a = c.get("engagement") or {}, c.get("author") or {}
+        who = a.get("name", "") + (" (автор канала)" if a.get("isCreator") else "")
+        rep = f", ответов {e.get('replies')}" if e.get("replies") else ""
+        print(f"- {who}, {e.get('likes') or 0} лайков{rep}, {str(c.get('publishedTime') or '')[:10]}: {t(c.get('content'))}")
+    if d.get("continuationToken"):
+        print("\n…есть ещё комментарии: следующая страница — тот же запрос с continuationToken.")
+
+
+def ig_post(m):
+    """Пост Instagram SC (`v1/instagram/post`): автор, цифры, подпись целиком."""
+    o = m.get("owner") or {}
+    cap = ((m.get("edge_media_to_caption") or {}).get("edges") or [{}])[0].get("node", {}).get("text", "")
+    kind = "рилс" if m.get("is_video") else "пост"
+    print(f"# Instagram @{o.get('username', '')} ({o.get('full_name', '')}), {kind}, {day(m.get('taken_at_timestamp'))}"
+          f" — https://www.instagram.com/p/{m.get('shortcode')}/")
+    extra = f" · просмотры {m.get('video_play_count')} · длина {round(m.get('video_duration') or 0)} с" if m.get("is_video") else ""
+    print(f"лайки {(m.get('edge_media_preview_like') or {}).get('count')} · комментарии {m.get('comment_count')}{extra}\n")
+    print(t(cap))
+
+
+def ig_comments(d):
+    """Комментарии Instagram SC (`v2/instagram/post/comments`): по лайкам."""
+    rows = sorted(d.get("comments") or [], key=lambda c: -(c.get("comment_like_count") or 0))
+    print(f"\n## Комментарии Instagram: {len(rows)} из {d.get('comment_count') or '?'} (по лайкам)\n")
+    for c in rows:
+        rep = f", ответов {c['child_comment_count']}" if c.get("child_comment_count") else ""
+        print(f"- @{(c.get('user') or {}).get('username', '')}, {c.get('comment_like_count') or 0} лайков{rep}, "
+              f"{str(c.get('created_at') or '')[:10]}: {t(c.get('text'))}")
+    if d.get("cursor"):
+        print("\n…есть ещё комментарии: следующая страница — тот же запрос с cursor.")
+
+
+def tt_video(a):
+    """Видео TikTok SC (`v2/tiktok/video`): автор, цифры, подпись, музыка."""
+    s, au = a.get("statistics") or {}, a.get("author") or {}
+    print(f"# TikTok @{au.get('unique_id', '')} ({au.get('nickname', '')}), {day(a.get('create_time'))}"
+          f" — https://www.tiktok.com/@{au.get('unique_id', '')}/video/{a.get('aweme_id')}")
+    print(f"просмотры {s.get('play_count')} · лайки {s.get('digg_count')} · комментарии {s.get('comment_count')} · "
+          f"репосты {s.get('share_count')} · сохранения {s.get('collect_count')}\n")
+    print(t(a.get("desc")))
+    mu = a.get("music") or {}
+    if mu.get("title"):
+        print(f"\nмузыка: {mu.get('title')} — {mu.get('author', '')}")
+
+
+def tt_comments(d):
+    """Комментарии TikTok SC (`v1/tiktok/video/comments`): по лайкам."""
+    rows = sorted(d.get("comments") or [], key=lambda c: -(c.get("digg_count") or 0))
+    print(f"\n## Комментарии TikTok: {len(rows)} (по лайкам)\n")
+    for c in rows:
+        rep = f", ответов {c['reply_comment_total']}" if c.get("reply_comment_total") else ""
+        print(f"- @{(c.get('user') or {}).get('unique_id', '')}, {c.get('digg_count') or 0} лайков{rep}, "
+              f"{day(c.get('create_time'))}: {t(c.get('text'))}")
+    if d.get("has_more"):
+        print("\n…есть ещё комментарии: следующая страница — тот же запрос с cursor.")
+
+
 files = [a for a in sys.argv[1:] if not a.startswith("--")]
 want = sys.argv[sys.argv.index("--id") + 1] if "--id" in sys.argv else None
 files = [f for f in files if f != want]
@@ -151,7 +216,21 @@ def add_post(item):
 
 for f in files:
     d = json.load(open(f, encoding="utf-8"))
-    if isinstance(d, dict) and isinstance(d.get("post"), dict) and "subreddit" in d["post"]:
+    first = (d.get("comments") or [{}])[0] if isinstance(d, dict) and isinstance(d.get("comments"), list) else {}
+    if isinstance(d, dict) and isinstance((d.get("data") or {}).get("xdt_shortcode_media"), dict):
+        ig_post(d["data"]["xdt_shortcode_media"])
+    elif isinstance(d, dict) and isinstance(first, dict) and "comment_like_count" in first:
+        ig_comments(d)
+    elif isinstance(d, dict) and isinstance(d.get("aweme_detail"), dict):
+        tt_video(d["aweme_detail"])
+    elif isinstance(d, dict) and isinstance(first, dict) and "digg_count" in first and "cid" in first or \
+            isinstance(d, dict) and "comments" in d and "has_more" in d and "reply_style" in d:
+        tt_comments(d)
+    elif isinstance(d, dict) and d.get("comments") and isinstance(d["comments"], list) and \
+            isinstance(d["comments"][0], dict) and "engagement" in d["comments"][0]:
+        yt_comments(d)
+        print("\n" + "=" * 60 + "\n")
+    elif isinstance(d, dict) and isinstance(d.get("post"), dict) and "subreddit" in d["post"]:
         reddit_thread(d)
         print("\n" + "=" * 60 + "\n")
     elif isinstance(d, dict) and "legacy" in d:
