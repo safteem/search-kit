@@ -1,4 +1,5 @@
-"""Сводка выдачи (YouTube, Reddit, Google по X и Threads, X и ответы через Apify) в один файл для отбора.
+"""Сводка выдачи соцсетей (YouTube, Reddit, Google по X и Threads, X и ответы через Apify) в один файл для отбора.
+Обычную выдачу Google читают как есть, без сводки.
 
 python -I summary.py <вопрос> <выход.md> <файл.json>::<площадка>::<формулировка>::<цель> [...]
 
@@ -6,7 +7,8 @@ python -I summary.py <вопрос> <выход.md> <файл.json>::<площа
 xs — поиск X (Apify scrape.badger), xr — ответы X (scrape.badger `Get Replies`), tr — ответы Threads (Apify nice_dev).
 
 Склеивает выдачи нескольких формулировок, убирает дубли, сортирует (Reddit по комментариям, YouTube и X по лайкам,
-шортсы по просмотрам, топ-15; ответы X и Threads по лайкам, топ-20), режет текст: пост Reddit и X 250 символов,
+шортсы по просмотрам, топ-15; ответы X и Threads по лайкам, топ-20), режет текст: пост Reddit и X 250 символов (ссылки не выкидывает, а сжимает до сайта и пути;
+у X добавляет до 2 ссылок поста и пометку «цитирует пост»),
 ответ 200, описание YouTube 120 без ссылок и эмодзи. У X не больше 3 постов одного автора в таблице, остальные
 короткими строками под ней. Сверху таблица запросов с целью и числом новых уникальных.
 """
@@ -21,8 +23,14 @@ NOW = dt.datetime.now(dt.timezone.utc)
 EMOJI = re.compile("[\U0001F000-\U0001FFFF☀-➿⬀-⯿️‍]")
 
 
-def clean(text, n):
-    text = html.unescape(re.sub(r"https?://\S+", "", text or ""))
+def short_link(m):
+    """Ссылку не выкидывать, а сжать до сайта и начала пути: в посте она бывает самым ценным."""
+    u = re.sub(r"^https?://(www\.)?", "", m.group(0)).rstrip(").,;")
+    return "" if u.startswith(("t.co/", "youtu", "bit.ly")) else u[:50]
+
+
+def clean(text, n, links=False):
+    text = html.unescape(re.sub(r"https?://\S+", short_link if links else "", text or ""))
     text = EMOJI.sub("", text)
     lines = [l.strip(" -•|►▬=_*") for l in text.splitlines()]
     text = " ".join(l for l in lines if len(l) > 2)
@@ -90,7 +98,11 @@ def x_tweet(x, n):
     """Твит из Apify scrape.badger (поиск, ответы, цепочка)."""
     created = x.get("created_at")
     age = (NOW - dt.datetime.strptime(created, "%a %b %d %H:%M:%S %z %Y")).days if created else ""
-    return dict(title=clean(x.get("full_text") or x.get("text"), n), where="@" + (x.get("username") or ""),
+    links = [u.get("expanded_url") for u in (x.get("urls") or []) if isinstance(u, dict) and u.get("expanded_url")]
+    links = [re.sub(r"^https?://(www\.)?", "", u)[:50] for u in links if not re.search(r"//(www\.)?(x|twitter)\.com/", u)][:2]
+    title = clean(x.get("full_text") or x.get("text"), n) + (" [цитирует пост]" if x.get("quoted_status_id") else "") + \
+        "".join(f" [{u}]" for u in links)
+    return dict(title=title, where="@" + (x.get("username") or ""),
                 sort=num(x.get("favorite_count")), replies=num(x.get("reply_count")), rts=num(x.get("retweet_count")),
                 marks=num(x.get("bookmark_count")), views=num(x.get("view_count")),
                 fol=short_num(num(x.get("user_followers_count"))), bio=clean(x.get("user_description"), 60), age=age,
@@ -137,7 +149,7 @@ for spec in specs:
             elif kind == "rd":
                 rec = dict(title=x["title"], where="r/" + x.get("subreddit", ""), sort=num(x.get("num_comments")),
                            ups=num(x.get("score")), age=age_days(x.get("created_at_iso")),
-                           text=clean(x.get("selftext"), 250), url=x.get("url") or ("https://www.reddit.com" + x["permalink"] if x.get("permalink") else "https://redd.it/" + x["id"]))
+                           text=clean(x.get("selftext"), 250, links=True), url=x.get("url") or ("https://www.reddit.com" + x["permalink"] if x.get("permalink") else "https://redd.it/" + x["id"]))
             else:
                 views, likes = num(x.get("viewCountInt")), num(x.get("likeCountInt"))
                 rec = dict(title=x["title"], where=(x.get("channel") or {}).get("title", ""), views=views, likes=likes,

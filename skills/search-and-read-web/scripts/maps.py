@@ -66,7 +66,7 @@ def place(r):
                 area=r.get("neighborhood") or r.get("city") or ("выезд" if r.get("pureServiceAreaBusiness") else ""),
                 site=r.get("website"), phone=r.get("phone"), lat=r.get("latitude"), lon=r.get("longitude"),
                 url=(r.get("googleMapsUri") or "").split("&g_mp=")[0] or None, near=near, closed=bool(status) and status != "OPERATIONAL",
-                hours=hours_of(r),
+                hours=hours_of(r), price=r.get("priceRange") or r.get("priceLabel") or "",
                 reviews=[])
 
 
@@ -144,15 +144,15 @@ def places_cmd(out, files, opt):
         few = [p for p in rows if (p["count"] or 0) < minimum]
         main.sort(key=lambda p: (-round(p["rating"] or 0, 1), -(p["count"] or 0)))
         few.sort(key=lambda p: (-(p["rating"] or 0), -(p["count"] or 0)))
-    head = ["#", "Место", "★", "Отзывов", "Категории", "Район", "Сайт", "Часы", "Рядом"]
+    head = ["#", "Место", "★", "Отзывов", "Цена", "Категории", "Район", "Сайт", "Телефон", "Часы", "Рядом"]
     if center:
         head.append(f"До «{center[1]}» по прямой")
     head += [f"До ближ.: {w}" for w, _ in nears]
 
     def line(i, p):
         cells = [str(i), f"[{short(p['name'], 45)}]({p['url']})" if p["url"] else short(p["name"], 45),
-                 str(p["rating"] if p["rating"] is not None else "—"), str(p["count"]),
-                 short(", ".join(p["cats"][:3]), 50), short(p["area"], 20), domain(p["site"]), p.get("hours") or "—", short(p["near"], 40)]
+                 str(p["rating"] if p["rating"] is not None else "—"), str(p["count"]), short(p.get("price") or "—", 15),
+                 short(", ".join(p["cats"][:3]), 50), short(p["area"], 20), domain(p["site"]), p.get("phone") or "—", p.get("hours") or "—", short(p["near"], 40)]
         return "| " + " | ".join(c.replace("|", "/") for c in cells + p["extra"]) + " |"
 
     out_lines = [f"# Сводка карт: {len(rows)} мест", "",
