@@ -25,7 +25,7 @@
 
 ## Установка
 
-**Claude Code** (и BB: он запускает Claude Code с теми же настройками). Скажите своему Claude:
+**Claude Code.** Скажите своему Claude:
 
 > Установи плагин search-kit из https://github.com/<владелец>/search-kit и запусти его скил setup.
 
@@ -36,20 +36,22 @@ claude plugin marketplace add <владелец>/search-kit
 claude plugin install search-kit@search-kit-marketplace
 ```
 
-Потом в новой сессии: «настрой search-kit». Скил `setup` проверит Python, ffmpeg и git, подключит недостающие
-сервисы, подскажет, где зарегистрироваться, проверит ключи (не показывая их), задаст пару вопросов для личного
-файла и сделает пробные запросы.
+Потом в новой сессии: «настрой search-kit».
 
-**Другие оболочки** (Codex, OpenCode, свои агенты): склонируйте репозиторий и укажите папку `skills/` как папку
-скилов оболочки (или сделайте на неё ярлык из её папки скилов):
+**BB (getbb.app).** Скилы в BB общие для всех агентов (Claude Code, Codex, Pi, Gemini, Antigravity и других), поэтому
+пакет ставится в BB, а не в настройки одного агента. Скажите агенту в BB:
 
-```
-git clone https://github.com/<владелец>/search-kit
-```
+> Склонируй https://github.com/<владелец>/search-kit, поставь скилы командой `python -I tools/install.py ~/.bb/skills` и запусти скил setup.
 
-Скилы пишут пути от своей папки, поэтому работают из любого места. Охранник подключается хуком оболочки, если она
-их умеет: у Codex формат хуков тот же, запись в `~/.codex/hooks.json` с полным путём к `hooks/guard.py` (подробно
-в [безопасности](docs/security.md)).
+Установщик кладёт каждый скил своей папкой в `~/.bb/skills` (если это ярлык на вашу папку скилов, то туда), чужие скилы
+не трогает, старые версии своих убирает в `~/.search-kit/backups/`. Ключи setup спросит формой хранилища секретов BB.
+
+**Другие оболочки** (Codex, OpenCode, свои агенты): так же `install.py` в папку скилов оболочки. Охранник
+подключается хуком оболочки, если она их умеет: у Codex формат хуков тот же, запись в `~/.codex/hooks.json` с полным
+путём к `hooks/guard.py` (подробно в [безопасности](docs/security.md)).
+
+В каждой оболочке скил `setup` проверит Python, ffmpeg и git, подскажет, где зарегистрироваться, проверит ключи
+(не показывая их), подключит недостающие сервисы, задаст пару вопросов для личного файла и сделает пробные запросы.
 
 ## Нужно на компьютере
 
@@ -60,12 +62,14 @@ Python 3.10+, git; ffmpeg по желанию (кадры из видео). Ск
 Пакет одинаковый у всех. Своё лежит вне его, обновления это не трогают:
 - `~/.search-kit/my-config.md`: имя, страна, языки, лимиты, предпочтения;
 - `~/.search-kit/telegram.json`, `~/.search-kit/telegram-chats.md`: Telegram, если подключён;
-- ключи: `~/.claude/credentials.md` (или `~/.search-kit/credentials.md`, если Claude Code нет); вписываете их вы сами.
+- ключи: `~/.search-kit/credentials.md` (Claude Code; заполняете сами в Блокноте) или `~/.search-kit/.env` (BB: его пишет
+  форма секретов BB). Старое место `~/.claude/credentials.md` тоже читается.
 
 ## Обновление
 
 Claude Code: скажите «обнови search-kit» (или `claude plugin marketplace update search-kit-marketplace`, затем
-`claude plugin update search-kit@search-kit-marketplace`). Другие оболочки: `git pull` в папке пакета.
+`claude plugin update search-kit@search-kit-marketplace`). BB и другие оболочки: `git pull` в папке пакета, затем снова
+`python -I tools/install.py <папка скилов>`.
 
 ## Для автора: перед каждым пушем
 

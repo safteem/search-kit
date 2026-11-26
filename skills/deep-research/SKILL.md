@@ -23,7 +23,9 @@ folder that holds the package's skills (one level up). Substitute full paths wit
 Telegram). In Claude Code they are listed as `search-kit:researcher` and `search-kit:social-researcher` (use the name
 your agent list shows). They have no tools that send anything, and in Claude Code a hook limits what they may read,
 write and run. If your environment has no such agents but has a generic subagent tool, use it and paste the safety
-rules from `{skills}/../agents/researcher.md` (everything below its front matter) at the top of every prompt. Never use
+rules from `{skills}/../agents/researcher.md` (in BB and other shells installed by `tools/install.py`:
+`{skills}/deep-research/agents/researcher.md`; for social media `social-researcher.md` next to it; everything below
+the front matter) at the top of every prompt. Never use
 a generic agent with send or publish tools for research.
 
 ## What "deep enough" means

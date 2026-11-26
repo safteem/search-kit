@@ -7,7 +7,9 @@ Claude Code ставит пакет плагином (README), этот скри
 
 Что делает: копирует каждую папку из skills/ пакета в <папку скилов>/<имя>. Если там уже есть папка с таким
 именем, сначала переносит её в ~/.search-kit/backups/<дата-время>/<имя> (откат: вернуть папку обратно).
-Чужие скилы в папке не трогает. Кэш Python и данные прогонов (research, data) не копирует.
+Чужие скилы в папке не трогает. Кэш Python и папки прогонов research не копирует.
+Правила помощников (agents/*.md) кладёт в <папку скилов>/deep-research/agents/: в оболочках без плагина
+deep-research вставляет их в задание обычного помощника.
 Повторный запуск после `git pull` — это и есть обновление.
 """
 import datetime as dt
@@ -17,7 +19,8 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 SRC = Path(__file__).resolve().parent.parent / "skills"
-SKIP = shutil.ignore_patterns("__pycache__", "*.pyc", "research", "data")
+SKIP = shutil.ignore_patterns("__pycache__", "*.pyc", "research")
+AGENTS = SRC.parent / "agents"
 
 
 def main():
@@ -39,6 +42,8 @@ def main():
         print(f"{skill.name}: ставлю в {dest}")
         if not dry:
             shutil.copytree(skill, dest, ignore=SKIP)
+            if skill.name == "deep-research" and AGENTS.is_dir():
+                shutil.copytree(AGENTS, dest / "agents")
     print("Готово (пробный прогон, ничего не менял)." if dry else
           "Готово. Перезапустите треды оболочки, чтобы она увидела новые скилы.")
 
