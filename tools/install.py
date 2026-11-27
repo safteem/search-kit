@@ -71,6 +71,18 @@ def skills():
     return sorted(p for p in SKILLS.iterdir() if (p / "SKILL.md").is_file())
 
 
+OLD_MARKS = ("search-kit", "sc.py", "ScrapeCreators", "summary.py", "social-capture", "search-and-read-web")
+
+
+def is_ours(folder):
+    """Наш скил, в том числе старая версия, поставленная вручную (в ней ещё не было слова «search-kit»)."""
+    f = folder / "SKILL.md"
+    if not f.is_file() or folder.name not in {s.name for s in skills()} | {"setup"}:
+        return False
+    text = f.read_text(encoding="utf-8", errors="ignore")
+    return any(m in text for m in OLD_MARKS)
+
+
 def is_link(p):
     return p.is_symlink() or (hasattr(os.path, "isjunction") and os.path.isjunction(p))
 
@@ -89,7 +101,7 @@ def link_into(target):
         sys.exit(f"Нет папки {target}. Папку скилов создаёт сама оболочка: запустите её один раз и повторите.")
     backup = MY / "backups" / dt.datetime.now().strftime("%Y-%m-%d-%H%M%S")
     old = target / "setup"  # так скил установки назывался до 26.11.2026
-    if (old / "SKILL.md").is_file() and "search-kit" in (old / "SKILL.md").read_text(encoding="utf-8", errors="ignore"):
+    if is_ours(old):
         say(f"setup: старое имя скила установки -> {backup / 'setup'}")
         if not DRY:
             backup.mkdir(parents=True, exist_ok=True)
@@ -104,7 +116,7 @@ def link_into(target):
             if not DRY:
                 os.rmdir(dest) if os.name == "nt" else dest.unlink()
         elif dest.exists():
-            ours = (dest / "SKILL.md").is_file() and "search-kit" in (dest / "SKILL.md").read_text(encoding="utf-8", errors="ignore")
+            ours = is_ours(dest)
             if not ours and not FORCE:
                 say(f"{skill.name}: ПРОПУЩЕН. В {dest} лежит чужой скил с тем же именем. Переименуйте его или "
                     "запустите с --force: тогда он уйдёт в резервную папку.")
